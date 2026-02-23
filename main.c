@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200112L
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,6 +12,8 @@
 
 #define DEFAULT_UDP_PORT "59000"
 #define DEFAULT_UDP_IP "193.136.138.142"
+
+#define Max_buff_size 320 //100 id x 3 for the 2 digits and the \n + 20 for the first line in the worse case
 
 typedef struct _comand_variables{
     bool is_node_in_net;
@@ -148,13 +151,13 @@ bool is_id_in_net(char* net, char* id){
 
 }
 
-void send_message_to_UDP_server(char* message, char** response, char* UDP_IP, char* UDP_Port){
+void send_message_to_UDP_server(char* message, char** response, int* sizeof_response, char* UDP_IP, char* UDP_Port){
     int fd,errcode;
     ssize_t n;
     socklen_t addrlen;
     struct addrinfo hints,*res;
-    struct sockaddr_in addr;
-    char buffer[128];
+    struct sockaddr_in addr; 
+    char buffer[Max_buff_size];
 
     fd=socket(AF_INET,SOCK_DGRAM,0); //UDP socket
     if(fd==-1) /*error*/exit(1);
@@ -170,7 +173,7 @@ void send_message_to_UDP_server(char* message, char** response, char* UDP_IP, ch
     if(n==-1) /*error*/ exit(1);
 
     addrlen=sizeof(addr);
-    n=recvfrom(fd,buffer,128,0,(struct sockaddr*)&addr,&addrlen);
+    n=recvfrom(fd,buffer,Max_buff_size,0,(struct sockaddr*)&addr,&addrlen);
     if(n==-1) /*error*/ exit(1);
 
 

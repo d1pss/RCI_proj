@@ -20,17 +20,22 @@ typedef struct _comand_variables{
     bool is_monitoring;
 }Cmd_V;
 
+void send_message_to_UDP_server(char* message, char** response, int* sizeof_response, char* UDP_IP, char* UDP_Port);
+
+bool is_id_in_net(char* net, char* id);
+
 int main(void){
+
 
     while(true){
         
-        
-
+      
 
 
 
     }
 
+    return 0;
 }
 
 
@@ -152,26 +157,31 @@ void join(char* net, char* id){
 
 bool is_id_in_net(char* net, char* id){
     char message[128];
-    char* response, *op;
+    char* response, op;
     int sizeof_response;
 
     sprintf(message, "CONTACT 100 0 %s %s\n", net, id);
+   
 
     send_message_to_UDP_server(message, &response, &sizeof_response, DEFAULT_UDP_IP, DEFAULT_UDP_PORT);
+ 
+    int items_found = sscanf(response, "%*s %*s %c", &op);
 
-    int code = sscanf(response, "%*s %*s %s %*s %*s %*s %*s", op);
+    if (items_found == 1) {
+        if (op == '1') {
+            // ID already exists
+            free(response);
+            return true;
+        } else if (op == '2') {
+            // ID does not exist
+            free(response);
+            return false;
+        }else{
+            //error code from network
+        }
+    }
 
     free(response);
-
-    if(atoi(op) == 1){
-        //id already exists
-        return true;
-    }else if(atoi(op) == 2){
-        //id does not exist
-        return false;
-    }else{
-        // network error
-    }
 
 }
 

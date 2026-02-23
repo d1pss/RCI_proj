@@ -111,7 +111,7 @@ bool process_command(char *input, Cmd_V* cmd_variables){
             }
 
             cmd_variables->is_node_in_net = true;
-            
+
             join(arguments[1], arguments[2]);
 
         }else if(!strcmp(cmd, "m")){
@@ -159,7 +159,7 @@ bool is_id_in_net(char* net, char* id){
 
     send_message_to_UDP_server(message, &response, &sizeof_response, DEFAULT_UDP_IP, DEFAULT_UDP_PORT);
 
-    sscanf(response, "%*s %*s %s %*s %*s %*s %*s", op);
+    int code = sscanf(response, "%*s %*s %s %*s %*s %*s %*s", op);
 
     free(response);
 

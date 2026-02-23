@@ -14,6 +14,7 @@
 #define DEFAULT_UDP_IP "193.136.138.142"
 
 #define Max_buff_size 320 //100 id x 3 for the 2 digits and the \n + 20 for the first line in the worse case
+#define Max_message_len 40 //in the worse case using REG we can have 38 chars so 40 is a safe number
 
 typedef struct _comand_variables{
     bool is_node_in_net;
@@ -150,13 +151,14 @@ void cmd_leave(){
 }
 
 void join(char* net, char* id){
-
+    char message[Max_message_len];
+    
     
 
 }
 
 bool is_id_in_net(char* net, char* id){
-    char message[128];
+    char message[Max_message_len];
     char* response, op;
     int sizeof_response;
 

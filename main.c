@@ -106,9 +106,12 @@ bool process_command(char *input, Cmd_V* cmd_variables){
                 //error net value should be between 999 and 000 end id between 99 and 00
             }
 
-            
+            if(is_id_in_net(arguments[1], arguments[2])){
+                //error id already exists must use a difrent one
+            }
 
             cmd_variables->is_node_in_net = true;
+            
             join(arguments[1], arguments[2]);
 
         }else if(!strcmp(cmd, "m")){
@@ -148,9 +151,32 @@ void join(char* net, char* id){
 }
 
 bool is_id_in_net(char* net, char* id){
+    char message[128];
+    char* response, *op;
+    int sizeof_response;
+
+    sprintf(message, "CONTACT 100 0 %s %s\n", net, id);
+
+    send_message_to_UDP_server(message, &response, &sizeof_response, DEFAULT_UDP_IP, DEFAULT_UDP_PORT);
+
+    sscanf(response, "%*s %*s %s %*s %*s %*s %*s", op);
+
+    free(response);
+
+    if(atoi(op) == 1){
+        //id already exists
+        return true;
+    }else if(atoi(op) == 2){
+        //id does not exist
+        return false;
+    }else{
+        // network error
+    }
 
 }
 
+
+//response needs to be freed outside the function 
 void send_message_to_UDP_server(char* message, char** response, int* sizeof_response, char* UDP_IP, char* UDP_Port){
     int fd,errcode;
     ssize_t n;
@@ -176,6 +202,20 @@ void send_message_to_UDP_server(char* message, char** response, int* sizeof_resp
     n=recvfrom(fd,buffer,Max_buff_size,0,(struct sockaddr*)&addr,&addrlen);
     if(n==-1) /*error*/ exit(1);
 
+    if(n < Max_buff_size){
+        buffer[n] = '\0';
+    }else{
+        //lost info not suposed to happen need bigger buffer
+        printf("SE ISTO IMPRIMIO PERCISAMOS DE UM BUFFER MAIOR\n"); //debug retirar no fim
+    }
+
+    *response = (char*)malloc((n+1)*sizeof(char));
+    if(response == NULL){
+        //error alocating memory
+        exit(1);
+    }
+    *sizeof_response = n;
+    strcpy(*response, buffer);
 
     freeaddrinfo(res);
     close(fd);

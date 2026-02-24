@@ -9,7 +9,7 @@
 #include <netdb.h>
 #include <stdbool.h>
 #include <string.h>
-//teste
+
 #define DEFAULT_UDP_PORT "59000"
 #define DEFAULT_UDP_IP "193.136.138.142"
 
@@ -48,7 +48,7 @@ int main(void){
 
 
 
-bool process_command(char *input, Cmd_V* cmd_variables, UDP_S* Server){
+int process_command(char *input, Cmd_V* cmd_variables, UDP_S* Server){
     int num_args;
     char cmd[4];
     int input_len = (int)strlen(input);
@@ -82,8 +82,8 @@ bool process_command(char *input, Cmd_V* cmd_variables, UDP_S* Server){
                 cmd_leave();
             }
 
-            //true means exit the program
-            return true;
+            //1 means exit the program
+            return 1;
 
         }else if(!strcmp(cmd, "sg")){
 
@@ -100,6 +100,12 @@ bool process_command(char *input, Cmd_V* cmd_variables, UDP_S* Server){
     }else if(num_args == 2){
 
         if(!strcmp(cmd, "n")){
+
+            if(atoi(arguments[1]) > 999 || atoi(arguments[1]) < 0){
+                //error net value should be between 999 and 000
+            }
+
+
 
         }else if(!strcmp(cmd, "ae")){
 
@@ -153,6 +159,57 @@ bool process_command(char *input, Cmd_V* cmd_variables, UDP_S* Server){
 
 }
 
+void cmd_show_nodes(char* net, UDP_S* Server){
+    char message[Max_message_len], *response, op;
+    int sizeof_response;
+
+    sprintf(message, "NODES 100 0 %s\n", net);
+
+    send_message_to_UDP_server(message, &response, &sizeof_response, Server);
+
+    int items_found = sscanf(response, "%*s %*s %c", &op);
+
+    if (items_found == 1) {
+        if (op == '1') {
+            // message contains the ids in the network
+            print_ids(response, sizeof_response);
+        }else{
+            //error code from network
+        }
+    }
+
+    free(response);
+    return;
+
+}
+
+void print_ids(char* response, int sizeof_response){
+
+    int first_id_index = 0;
+    char id_to_print[3] = {'0', '0', '\0'};
+
+    for(int i = 0; i < sizeof_response; i++){
+        if(response[i] == '\n'){
+            first_id_index = i + 1;
+        }
+    }
+    if(first_id_index != 0){
+        if(first_id_index != sizeof_response){
+            for(int i = first_id_index; i < sizeof_response; i+3){
+                id_to_print[0] = response[i];
+                id_to_print[0] = response[i+1];
+                printf("%s\n", id_to_print);
+            }
+        }else{
+            // there is no nodes in the network
+        }
+    }else{
+        //response is not as expected
+    }
+    
+    return;
+}
+
 void cmd_leave(){
     //retira todas as arestas ligadas ao no e remove o no da rede
 }
@@ -165,7 +222,7 @@ void cmd_join(char* net, char* id, UDP_S* Server){
 
     get_new_ip_and_Port(&new_IP, &new_Port);
     
-    sprintf(message, "REG 100 0 %s %s %s %s", net, id, new_IP, new_Port);
+    sprintf(message, "REG 100 0 %s %s %s %s\n", net, id, new_IP, new_Port);
 
     send_message_to_UDP_server(message, &response, &sizeof_response, Server);
 

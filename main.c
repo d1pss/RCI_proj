@@ -50,7 +50,7 @@ int main(void){
 
 int process_command(char *input, Cmd_V* cmd_variables, UDP_S* Server){
     int num_args, return_code;
-    char cmd[4];
+    char cmd[4]; //meter caso de cmd for maior que 4
     int input_len = (int)strlen(input);
     char* arguments[3];
 
@@ -60,7 +60,7 @@ int process_command(char *input, Cmd_V* cmd_variables, UDP_S* Server){
             //failed to alocate mem to heap
             exit(1);
         }
-
+        
     }
     
     num_args = sscanf(input, "%s %s %s %s", cmd, arguments[0], arguments[1], arguments[2]);
@@ -229,8 +229,40 @@ void print_ids(char* response, int sizeof_response, char* net){
     return;
 }
 
-void cmd_leave(){
-    //retira todas as arestas ligadas ao no e remove o no da rede
+void cmd_leave(char* net, char* id, UDP_S* Server){
+    char message[Max_message_len], *response, op;
+    int sizeof_response, n_neighbours;
+    char* new_IP, *new_Port;
+    get_new_ip_and_Port(&new_IP, &new_Port);
+    //está associado a OWR IP TCP regIP regUDP
+
+    get_neighbours();
+
+    for(int i = 0; i < n_neighbours; i++){
+        cmd_remove_edge(char* net, char* id, UDP_S* Server);
+    }
+
+   
+
+    sprintf(message, "REG 100 3 %s %s %s %s\n", net, id, new_IP, new_Port);
+    send_message_to_UDP_server(message, &response, &sizeof_response, Server);
+    int items_found = sscanf(response, "%*s %*s %c", &op);
+
+    
+    if (items_found == 1) {
+        if (op == '') {
+            // id succesfully left
+            free(response);
+            return;
+        }
+        }else{
+            //error code from network
+        }
+    }
+
+    free(response);
+    return;
+
 }
 
 void cmd_join(char* net, char* id, UDP_S* Server){
@@ -240,6 +272,7 @@ void cmd_join(char* net, char* id, UDP_S* Server){
     char* new_IP, *new_Port;
 
     get_new_ip_and_Port(&new_IP, &new_Port);
+    //está associado a OWR IP TCP regIP regUDP
     
     sprintf(message, "REG 100 0 %s %s %s %s\n", net, id, new_IP, new_Port);
 
@@ -268,6 +301,15 @@ void cmd_join(char* net, char* id, UDP_S* Server){
 
 void get_new_ip_and_Port(char** new_IP, char**new_Port){
 
+}
+
+void cmd_remove_edge(char* net, char* id, UDP_S* Server){
+
+}
+
+int get_neighbours(){
+
+    return;
 }
 
 bool is_id_in_net(char* net, char* id, UDP_S* Server){

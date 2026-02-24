@@ -49,7 +49,7 @@ int main(void){
 
 
 int process_command(char *input, Cmd_V* cmd_variables, UDP_S* Server){
-    int num_args;
+    int num_args, return_code;
     char cmd[4];
     int input_len = (int)strlen(input);
     char* arguments[3];
@@ -82,7 +82,7 @@ int process_command(char *input, Cmd_V* cmd_variables, UDP_S* Server){
                 cmd_leave();
             }
 
-            //1 means exit the program
+            //return to main to exit the program without errors
             return 1;
 
         }else if(!strcmp(cmd, "sg")){
@@ -103,9 +103,18 @@ int process_command(char *input, Cmd_V* cmd_variables, UDP_S* Server){
 
             if(atoi(arguments[1]) > 999 || atoi(arguments[1]) < 0){
                 //error net value should be between 999 and 000
+                printf("ERROR:");
             }
 
+            return_code = cmd_show_nodes(arguments[1], Server);
 
+            if(return_code == 1){
+                //return to main to exit the program with network error
+                return 2;
+            }
+
+            //return to main without error
+            return 0;
 
         }else if(!strcmp(cmd, "ae")){
 
@@ -159,7 +168,7 @@ int process_command(char *input, Cmd_V* cmd_variables, UDP_S* Server){
 
 }
 
-void cmd_show_nodes(char* net, UDP_S* Server){
+int cmd_show_nodes(char* net, UDP_S* Server){
     char message[Max_message_len], *response, op;
     int sizeof_response;
 
@@ -172,18 +181,25 @@ void cmd_show_nodes(char* net, UDP_S* Server){
     if (items_found == 1) {
         if (op == '1') {
             // message contains the ids in the network
-            print_ids(response, sizeof_response);
+            print_ids(response, sizeof_response, net);
+
+            free(response);
+            return 0;
         }else{
             //error code from network
+            printf("ERROR: error code (%c) from network using this comand %s\n", op, message);
+
+            free(response);
+            return 1;
         }
     }
 
-    free(response);
-    return;
+    
+    
 
 }
 
-void print_ids(char* response, int sizeof_response){
+void print_ids(char* response, int sizeof_response, char* net){
 
     int first_id_index = 0;
     char id_to_print[3] = {'0', '0', '\0'};
@@ -195,6 +211,7 @@ void print_ids(char* response, int sizeof_response){
     }
     if(first_id_index != 0){
         if(first_id_index != sizeof_response){
+            printf("List of Nodes in network %s:\n", net);
             for(int i = first_id_index; i < sizeof_response; i+3){
                 id_to_print[0] = response[i];
                 id_to_print[0] = response[i+1];
@@ -202,9 +219,11 @@ void print_ids(char* response, int sizeof_response){
             }
         }else{
             // there is no nodes in the network
+            printf("There are no Nodes in the network %s to show.\n", net);
         }
     }else{
         //response is not as expected
+        printf("DEBUG ERROR: (in function print_ids) if we are reading this the server sent a bad formated response (not suposed to do that)\n");
     }
     
     return;

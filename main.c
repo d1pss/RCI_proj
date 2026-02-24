@@ -21,9 +21,16 @@ typedef struct _comand_variables{
     bool is_monitoring;
 }Cmd_V;
 
-void send_message_to_UDP_server(char* message, char** response, int* sizeof_response, char* UDP_IP, char* UDP_Port);
+typedef struct _UDP_Server
+{
+    char IP[16];
+    char Port[6];
+}UDP_S;
 
-bool is_id_in_net(char* net, char* id);
+
+void send_message_to_UDP_server(char* message, char** response, int* sizeof_response, UDP_S* Server);
+
+bool is_id_in_net(char* net, char* id, UDP_S* Server);
 
 int main(void){
 
@@ -41,7 +48,7 @@ int main(void){
 
 
 
-bool process_command(char *input, Cmd_V* cmd_variables){
+bool process_command(char *input, Cmd_V* cmd_variables, UDP_S* Server){
     int num_args;
     char cmd[4];
     int input_len = (int)strlen(input);
@@ -112,13 +119,13 @@ bool process_command(char *input, Cmd_V* cmd_variables){
                 //error net value should be between 999 and 000 end id between 99 and 00
             }
 
-            if(is_id_in_net(arguments[1], arguments[2])){
+            if(is_id_in_net(arguments[1], arguments[2], Server)){
                 //error id already exists must use a difrent one
             }
 
             cmd_variables->is_node_in_net = true;
 
-            join(arguments[1], arguments[2]);
+            cmd_join(arguments[1], arguments[2], Server);
 
         }else if(!strcmp(cmd, "m")){
 
@@ -150,14 +157,44 @@ void cmd_leave(){
     //retira todas as arestas ligadas ao no e remove o no da rede
 }
 
-void join(char* net, char* id){
-    char message[Max_message_len];
+void cmd_join(char* net, char* id, UDP_S* Server){
+    char message[Max_message_len], *response, op;
+    int sizeof_response;
+
+    char* new_IP, *new_Port;
+
+    get_new_ip_and_Port(&new_IP, &new_Port);
     
-    
+    sprintf(message, "REG 100 0 %s %s %s %s", net, id, new_IP, new_Port);
+
+    send_message_to_UDP_server(message, &response, &sizeof_response, Server);
+
+    int items_found = sscanf(response, "%*s %*s %c", &op);
+
+    if (items_found == 1) {
+        if (op == '1') {
+            // id sucessfuly registred in network
+            free(response);
+            return;
+        } else if (op == '2') {
+            // Network is full
+            free(response);
+            return;
+        }else{
+            //error code from network
+        }
+    }
+
+    free(response);
+    return;
 
 }
 
-bool is_id_in_net(char* net, char* id){
+void get_new_ip_and_Port(char** new_IP, char**new_Port){
+
+}
+
+bool is_id_in_net(char* net, char* id, UDP_S* Server){
     char message[Max_message_len];
     char* response, op;
     int sizeof_response;
@@ -165,7 +202,7 @@ bool is_id_in_net(char* net, char* id){
     sprintf(message, "CONTACT 100 0 %s %s\n", net, id);
    
 
-    send_message_to_UDP_server(message, &response, &sizeof_response, DEFAULT_UDP_IP, DEFAULT_UDP_PORT);
+    send_message_to_UDP_server(message, &response, &sizeof_response, Server);
  
     int items_found = sscanf(response, "%*s %*s %c", &op);
 
@@ -189,7 +226,7 @@ bool is_id_in_net(char* net, char* id){
 
 
 //response needs to be freed outside the function 
-void send_message_to_UDP_server(char* message, char** response, int* sizeof_response, char* UDP_IP, char* UDP_Port){
+void send_message_to_UDP_server(char* message, char** response, int* sizeof_response, UDP_S* Server){
     int fd,errcode;
     ssize_t n;
     socklen_t addrlen;
@@ -204,7 +241,7 @@ void send_message_to_UDP_server(char* message, char** response, int* sizeof_resp
     hints.ai_family=AF_INET; //IPv4
     hints.ai_socktype=SOCK_DGRAM; //UDP socket
 
-    errcode=getaddrinfo(UDP_IP,UDP_Port,&hints,&res);
+    errcode=getaddrinfo(Server->IP,Server->Port,&hints,&res);
     if(errcode!=0) /*error*/ exit(1);
 
     n=sendto(fd,message,strlen(message),0,res->ai_addr,res->ai_addrlen);

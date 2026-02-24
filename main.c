@@ -14,7 +14,9 @@
 #define DEFAULT_UDP_IP "193.136.138.142"
 
 #define Max_buff_size 320 //100 id x 3 for the 2 digits and the \n + 20 for the first line in the worse case
-#define Max_message_len 40 //in the worse case using REG we can have 38 chars so 40 is a safe number
+#define Max_message_len 40 //in the worse case using REG we can have 38 chars so 40 is a safe lenght
+#define Max_cmd_len 32 //in the worse case using (dae id idIP idTCP) we can have 30 chars so 32 is a safe lenght
+#define Max_cmd_arguments 3 //in the worse case using (dae id idIP idTCP) we have 3 arguments
 
 typedef struct _comand_variables{
     bool is_node_in_net;
@@ -30,7 +32,7 @@ typedef struct _UDP_Server
 
 int send_message_to_UDP_server(char* message, char** response, int* response_len, UDP_S* Server);
 
-bool is_id_in_net(char* net, char* id, UDP_S* Server);
+int is_id_in_net(bool* is_id_in_net ,char* net, char* id, UDP_S* Server);
 
 int main(void){
 
@@ -47,6 +49,7 @@ int main(void){
 }
 
 
+
 //return 0 return to main without error
 //return 1 return to main to exit the program without errors
 //return 2 return to main to exit the program with network error
@@ -55,37 +58,36 @@ int main(void){
 //return 5 return to main to exit the program with connection via UDP or TCP error
 //return 6 return to main to exit the program with not suposed to happend case
 int process_command(char *input, Cmd_V* cmd_variables, UDP_S* Server){
+    char arguments[Max_cmd_arguments][Max_cmd_len], cmd[Max_cmd_len];
     int num_args, return_code;
-    char cmd[4]; //meter caso de cmd for maior que 4
-    int input_len = (int)strlen(input);
-    char* arguments[3];
-
-    for(int i = 0; i < 3; i++){
-        arguments[i] = (char*)malloc(input_len * sizeof(char));
-        if(arguments[i] == NULL){
-            //failed to alocate mem to heap
-            exit(1);
-        }
-        
-    }
+    
+    bool does_id_exist;
     
     num_args = sscanf(input, "%s %s %s %s", cmd, arguments[0], arguments[1], arguments[2]);
 
     if(num_args == 1){
         if(!strcmp(cmd, "l")){
             if(cmd_variables->is_node_in_net){
-                cmd_leave();
+                //the node is in the network, so leave
+                //cmd_leave();
+
                 cmd_variables->is_node_in_net = false;
+
+                return 0;
             }else{
                 //the node is not in the network, so no need to leave
+                printf("The node is not in the network, so no need to leave\n");
+                
+                return 0;
             }
             
 
         }else if(!strcmp(cmd, "x")){
 
+            //in case we forget to leave before exiting
             if(cmd_variables->is_node_in_net){
-                //in case we forget to leave before exiting
-                cmd_leave();
+                //the node is in the network, so leave
+                //cmd_leave();
             }
 
             //return to main to exit the program without errors
@@ -101,6 +103,8 @@ int process_command(char *input, Cmd_V* cmd_variables, UDP_S* Server){
 
         }else{
             //error bad input
+            printf("The comand used (%s) is not a valid input\n", cmd);
+            return 3;
         }
 
     }else if(num_args == 2){
@@ -110,17 +114,12 @@ int process_command(char *input, Cmd_V* cmd_variables, UDP_S* Server){
             if(atoi(arguments[0]) > 999 || atoi(arguments[0]) < 0){
                 //error net value should be between 999 and 000
                 printf("ERROR: input argument net should be between 000 and 999\n");
+                return 3;
             }
 
             return_code = cmd_show_nodes(arguments[0], Server);
 
-            if(return_code == 1){
-                //return to main to exit the program with network error
-                return 2;
-            }
-
-            //return to main without error
-            return 0;
+            return return_code;
 
         }else if(!strcmp(cmd, "ae")){
 
@@ -130,23 +129,43 @@ int process_command(char *input, Cmd_V* cmd_variables, UDP_S* Server){
 
         }else{
             //error bad input
+            printf("The comand used (%s) is not a valid input\n", cmd);
+            return 3;
         }
 
     }else if(num_args == 3){
 
         if(!strcmp(cmd, "j")){
 
-            if(atoi(arguments[0]) > 999 || atoi(arguments[0]) < 0 || atoi(arguments[1]) > 99 || atoi(arguments[1]) < 0){
-                //error net value should be between 999 and 000 end id between 99 and 00
+            if(atoi(arguments[0]) > 999 || atoi(arguments[0]) < 0){
+                //error net value should be between 999 and 000
+                printf("ERROR: input argument net should be between 000 and 999\n");
+                return 3;
             }
 
-            if(is_id_in_net(arguments[0], arguments[1], Server)){
+            if(atoi(arguments[1]) > 99 || atoi(arguments[1]) < 0){
+                //error id value should be between 99 and 00
+                printf("ERROR: input argument id should be between 00 and 99\n");
+                return 3;
+            }
+
+            return_code = is_id_in_net(&does_id_exist ,arguments[0], arguments[1], Server);
+
+            if(return_code != 0){
+                return return_code;
+            }
+
+            if(does_id_exist){
                 //error id already exists must use a difrent one
+                printf("The id chosen (%s) is in use. Must use a difrent id to add the node to the network %s\n", arguments[1], arguments[0]);
+                return 0;
             }
 
             cmd_variables->is_node_in_net = true;
 
-            cmd_join(arguments[1], arguments[2], Server);
+            return_code = cmd_join(arguments[0], arguments[1], Server);
+
+            return return_code;
 
         }else if(!strcmp(cmd, "m")){
 
@@ -154,6 +173,8 @@ int process_command(char *input, Cmd_V* cmd_variables, UDP_S* Server){
 
         }else{
             //error bad input
+            printf("The comand used (%s) is not a valid input\n", cmd);
+            return 3;
         }
         
     }else if(num_args == 4){
@@ -162,16 +183,15 @@ int process_command(char *input, Cmd_V* cmd_variables, UDP_S* Server){
 
         }else{
             //error bad input
+            printf("The comand used (%s) is not a valid input\n", cmd);
+            return 3;
         }
 
     }else{
-        //error not suposed to be here (sscanf error)
+        //unexpected sscanf return
+        printf("DEBUG ERROR: (in function process_command) if we are reading this the sscanf returned an unexpected number (not suposed to do that)\n");
+        return 6;
     }
-
-    // false to not leave the program
-    return false;
-    
-
 }
 
 int cmd_show_nodes(char* net, UDP_S* Server){
@@ -226,20 +246,20 @@ int print_ids(char* response, int response_len, char* net){
                 id_to_print[0] = response[i+1];
                 printf("%s\n", id_to_print);
             }
+            return 0;
         }else{
             // there is no nodes in the network
             printf("There are no Nodes in the network %s to show.\n", net);
+            return 0;
         }
     }else{
         //response is not as expected
         printf("DEBUG ERROR: (in function print_ids) if we are reading this the server sent a bad formated response (not suposed to do that)\n");
+        free(response);
         return 6;
     }
-    
-    return 0;
 }
 
-<<<<<<< HEAD
 void cmd_leave(char* net, char* id, UDP_S* Server){
     char message[Max_message_len], *response, op;
     int sizeof_response, n_neighbours;
@@ -261,11 +281,11 @@ void cmd_leave(char* net, char* id, UDP_S* Server){
 
     
     if (items_found == 1) {
-        if (op == '') {
+        if (op == '4') {
             // id succesfully left
             free(response);
             return;
-        }
+        
         }else{
             //error code from network
         }
@@ -274,10 +294,6 @@ void cmd_leave(char* net, char* id, UDP_S* Server){
     free(response);
     return;
 
-=======
-int cmd_leave(){
-    //retira todas as arestas ligadas ao no e remove o no da rede
->>>>>>> 1b41a61dd10d8d00fae197d5b6b4962c33c68e8d
 }
 
 int cmd_join(char* net, char* id, UDP_S* Server){
@@ -286,12 +302,8 @@ int cmd_join(char* net, char* id, UDP_S* Server){
 
     char* new_IP, *new_Port;
 
-<<<<<<< HEAD
-    get_new_ip_and_Port(&new_IP, &new_Port);
-    //está associado a OWR IP TCP regIP regUDP
-=======
     //get_new_ip_and_Port(&new_IP, &new_Port);
->>>>>>> 1b41a61dd10d8d00fae197d5b6b4962c33c68e8d
+    //está associado a OWR IP TCP regIP regUDP
     
     sprintf(message, "REG 100 0 %s %s %s %s\n", net, id, new_IP, new_Port);
 
@@ -312,6 +324,8 @@ int cmd_join(char* net, char* id, UDP_S* Server){
             return 0;
         } else if (op == '2') {
             // Network is full
+            printf("id was not registred in the network because its full\n");
+
             free(response);
             return 0;
         }else{
@@ -324,6 +338,7 @@ int cmd_join(char* net, char* id, UDP_S* Server){
     }else{
         //response is not as expected
         printf("DEBUG ERROR: (in function cmd_join) if we are reading this the server sent a bad formated response (not suposed to do that)\n");
+        free(response);
         return 6;
     }
 }
@@ -338,34 +353,48 @@ int get_neighbours(){
     return;
 }
 
-bool is_id_in_net(char* net, char* id, UDP_S* Server){
+int is_id_in_net(bool* is_id_in_net ,char* net, char* id, UDP_S* Server){
     char message[Max_message_len];
     char* response, op;
-    int response_len;
+    int response_len, return_code;
 
     sprintf(message, "CONTACT 100 0 %s %s\n", net, id);
    
 
-    send_message_to_UDP_server(message, &response, &response_len, Server);
+    return_code = send_message_to_UDP_server(message, &response, &response_len, Server);
+
+    if(return_code != 0){
+        return return_code;
+    }
  
     int items_found = sscanf(response, "%*s %*s %c", &op);
 
     if (items_found == 1) {
         if (op == '1') {
             // ID already exists
+            *is_id_in_net = true;
+
             free(response);
-            return true;
+            return 0;
         } else if (op == '2') {
             // ID does not exist
+            *is_id_in_net = false;
+
             free(response);
-            return false;
+            return 0;
         }else{
             //error code from network
+            printf("ERROR: error code (%c) from network using this comand %s\n", op, message);
+
+            free(response);
+            return 2;
         }
+    }else{
+        //response is not as expected
+        printf("DEBUG ERROR: (in function cmd_join) if we are reading this the server sent a bad formated response (not suposed to do that)\n");
+        free(response);
+        return 6;
     }
-
-    free(response);
-
 }
 
 
@@ -404,7 +433,7 @@ int send_message_to_UDP_server(char* message, char** response, int* response_len
 
     *response = (char*)malloc((n+1)*sizeof(char));
     if(*response == NULL){
-        //error alocating memory
+        printf("ERROR: error alocating memory");
         return 4;
     }
     *response_len = n;

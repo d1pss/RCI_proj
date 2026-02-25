@@ -9,6 +9,7 @@
 #include <netdb.h>
 #include <stdbool.h>
 #include <string.h>
+#include <sys/select.h>
 
 #define DEFAULT_UDP_PORT "59000"
 #define DEFAULT_UDP_IP "193.136.138.142"
@@ -17,15 +18,18 @@
 #define Max_message_len 40 //in the worse case using REG we can have 38 chars so 40 is a safe lenght
 #define Max_cmd_len 32 //in the worse case using (dae id idIP idTCP) we can have 30 chars so 32 is a safe lenght
 #define Max_cmd_arguments 3 //in the worse case using (dae id idIP idTCP) we have 3 arguments
+#define Max_IP_len 16 // in the worse case we have xxx.xxx.xxx.xxx\0 that is 16 chars
+#define Max_Port_len 6 // in the worse case we have xxxxx\0 that is 6 chars
+#define Number_of_ids 100 // we have ids between 00 and 99, so 100 in total
 
 typedef struct _Node_information{
     //TCP info for node to node connection
-    char Node_TCP_IP[16];
-    char Node_TCP_Port[6];
+    char Node_TCP_IP[Max_IP_len];
+    char Node_TCP_Port[Max_Port_len];
 
     //UDP info for node to network connection
-    char UDP_Server_IP[16];
-    char UDP_Server_Port[6];
+    char UDP_Server_IP[Max_IP_len];
+    char UDP_Server_Port[Max_Port_len];
 
     //flags
     bool is_node_in_net;
@@ -33,14 +37,71 @@ typedef struct _Node_information{
 }Node_info;
 
 int main(int argc, char *argv[]){
-    if(argc != 3 || argc != 5){
-        printf("Comand format is incorrect.\nUsage: ./OWR IP TCP regIP regUDP");
-        return 3;
+    
+
+    if(argc == 5){
+        if(is_IP_invalid(argv[1])){
+            printf("IP used in ./OWR --> IP <-- TCP regIP regUDP does not folow the standard IPv4 structure\n");
+            return 0;
+        }
+        if(is_Port_invalid(argv[2])){
+            printf("TCP Port used in ./OWR IP --> TCP <-- regIP regUDP does not folow the standard Port structure\n");
+            return 0;
+        }
+        if(is_IP_invalid(argv[3])){
+            printf("IP used in ./OWR IP TCP --> regIP <-- regUDP does not folow the standard IPv4 structure\n");
+            return 0;
+        }
+        if(is_Port_invalid(argv[4])){
+            printf("UDP Port used in ./OWR IP TCP regIP --> regUDP <-- does not folow the standard Port structure\n");
+            return 0;
+        }
+    }else if(argc == 3){
+        if(is_IP_invalid(argv[1])){
+            printf("IP used in ./OWR --> IP <-- TCP does not folow the standard IPv4 structure\n");
+            return 0;
+        }
+        if(is_Port_invalid(argv[2])){
+            printf("TCP Port used in ./OWR IP --> TCP <-- does not folow the standard Port structure\n");
+            return 0;
+        }
+    }else{
+        printf("Comand format is incorrect.\nUsage: ./OWR IP TCP regIP regUDP\n");
+        return 0;
     }
+    
+    Node_info* My_node = init_Node(argv, argc);
+
+    
+
+
+
+    int nfds;
+    fd_set fdset;
 
     while(true){
+        FD_ZERO(&fdset);
+        FD_SET(STDIN_FILENO, &fdset);
         
-      
+
+        switch (select(nfds, &fdset, NULL, NULL, NULL))
+        {
+        case 0:
+            //timeout
+            break;
+
+        case -1:
+            //error
+            break;
+        
+        default:
+            if(FD_ISSET(STDIN_FILENO, &fdset)){
+
+
+            } 
+            
+            break;
+        }
 
 
 
@@ -49,12 +110,65 @@ int main(int argc, char *argv[]){
     return 0;
 }
 
-bool is_IP_valid(char* IP){
-    //a.b.c.d e n podem ser maior que 255
+bool is_IP_invalid(char* IP) {
+    int a, b, c, d;
+    int last_index = 0;
+
+    // %n stores the index of the last element into
+    if (sscanf(IP, "%d.%d.%d.%d%n", &a, &b, &c, &d, &last_index) != 4) {
+        return true; 
+    }
+
+    // Se o número de caracteres lidos pelo sscanf for diferente do 
+    // tamanho total da string, significa que sobrou "lixo" no final.
+    if (IP[last_index] != '\0') {
+        return true;
+    }
+
+    if (a < 0 || a > 255 || b < 0 || b > 255 || 
+        c < 0 || c > 255 || d < 0 || d > 255) {
+        return true;
+    }
+
+    return false;
 }
 
-bool is_Port_valid(char* Port){
-    //tem que ter so numeros e n pode ser maior que o max
+bool is_Port_invalid(char* Port) {
+    char* endptr;
+    // Converte string para long, endptr aponta onde a conversão parou
+    long p = strtol(Port, &endptr, 10);
+
+    // Se endptr ainda aponta para Port, não era um número.
+    // Se *endptr não for \0, havia lixo (ex: "8080abc")
+    if (Port == endptr || *endptr != '\0') return true;
+
+    if (p < 1 || p > 65535) return true;
+
+    return false;
+}
+
+Node_info* init_Node(char** argv, int argc){
+    Node_info* My_node = (Node_info*)malloc(sizeof(Node_info));
+    if(My_node == NULL){
+        printf("ERROR: error alocating memory");
+        return 1;
+    }
+
+    strcpy(My_node->Node_TCP_IP, argv[1]);
+    strcpy(My_node->Node_TCP_Port, argv[2]);
+
+    if(argc == 5){
+        strcpy(My_node->UDP_Server_IP, argv[3]);
+        strcpy(My_node->UDP_Server_Port, argv[4]);
+    }else{
+        strcpy(My_node->UDP_Server_IP, DEFAULT_UDP_IP);
+        strcpy(My_node->UDP_Server_Port, DEFAULT_UDP_PORT);
+    }
+
+    My_node->is_node_in_net = false;
+    My_node->is_monitoring = false;
+
+    return My_node;
 }
 
 
@@ -156,6 +270,12 @@ int process_command(char *input, Node_info* My_node){
                 //error id value should be between 99 and 00
                 printf("ERROR: input argument id should be between 00 and 99\n");
                 return 3;
+            }
+
+            if(My_node->is_node_in_net){
+                //no need to join node is already in th network
+
+
             }
 
             return_code = is_id_in_net(&does_id_exist ,arguments[0], arguments[1], My_node);
@@ -426,6 +546,10 @@ int send_message_to_UDP_server(char* message, char** response, int* response_len
 
     n=sendto(fd,message,strlen(message),0,res->ai_addr,res->ai_addrlen);
     if(n==-1) /*error*/ return 5;
+
+
+    //do select here
+
 
     addrlen=sizeof(addr);
     n=recvfrom(fd,buffer,Max_buff_size,0,(struct sockaddr*)&addr,&addrlen);

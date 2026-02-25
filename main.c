@@ -18,24 +18,25 @@
 #define Max_cmd_len 32 //in the worse case using (dae id idIP idTCP) we can have 30 chars so 32 is a safe lenght
 #define Max_cmd_arguments 3 //in the worse case using (dae id idIP idTCP) we have 3 arguments
 
-typedef struct _comand_variables{
+typedef struct _Node_information{
+    //TCP info for node to node connection
+    char Node_TCP_IP[16];
+    char Node_TCP_Port[6];
+
+    //UDP info for node to network connection
+    char UDP_Server_IP[16];
+    char UDP_Server_Port[6];
+
+    //flags
     bool is_node_in_net;
     bool is_monitoring;
-}Cmd_V;
+}Node_info;
 
-typedef struct _UDP_Server
-{
-    char IP[16];
-    char Port[6];
-}UDP_S;
-
-
-int send_message_to_UDP_server(char* message, char** response, int* response_len, UDP_S* Server);
-
-int is_id_in_net(bool* is_id_in_net ,char* net, char* id, UDP_S* Server);
-
-int main(void){
-
+int main(int argc, char *argv[]){
+    if(argc != 3 || argc != 5){
+        printf("Comand format is incorrect.\nUsage: ./OWR IP TCP regIP regUDP");
+        return 3;
+    }
 
     while(true){
         
@@ -48,36 +49,44 @@ int main(void){
     return 0;
 }
 
+bool is_IP_valid(char* IP){
+    //a.b.c.d e n podem ser maior que 255
+}
+
+bool is_Port_valid(char* Port){
+    //tem que ter so numeros e n pode ser maior que o max
+}
+
 
 
 //return 0 return to main without error
 //return 1 return to main to exit the program without errors
-//return 2 return to main to exit the program with network error
-//return 3 return to main to exit the program with incorrect input
+//return 2 return to main to with network error
+//return 3 return to main to with incorrect input
 //return 4 return to main to exit the program with memory allocation error
 //return 5 return to main to exit the program with connection via UDP or TCP error
 //return 6 return to main to exit the program with not suposed to happend case
-int process_command(char *input, Cmd_V* cmd_variables, UDP_S* Server){
+int process_command(char *input, Node_info* My_node){
     char arguments[Max_cmd_arguments][Max_cmd_len], cmd[Max_cmd_len];
     int num_args, return_code;
     
     bool does_id_exist;
     
-    num_args = sscanf(input, "%s %s %s %s", cmd, arguments[0], arguments[1], arguments[2]);
+    num_args = sscanf(input, "%s %s %s %s", &cmd, &arguments[0], &arguments[1], &arguments[2]);
 
     if(num_args == 1){
         if(!strcmp(cmd, "l")){
-            if(cmd_variables->is_node_in_net){
+            if(My_node->is_node_in_net){
                 //the node is in the network, so leave
                 //cmd_leave();
 
-                cmd_variables->is_node_in_net = false;
+                My_node->is_node_in_net = false;
 
                 return 0;
             }else{
                 //the node is not in the network, so no need to leave
                 printf("The node is not in the network, so no need to leave\n");
-                
+
                 return 0;
             }
             
@@ -85,7 +94,7 @@ int process_command(char *input, Cmd_V* cmd_variables, UDP_S* Server){
         }else if(!strcmp(cmd, "x")){
 
             //in case we forget to leave before exiting
-            if(cmd_variables->is_node_in_net){
+            if(My_node->is_node_in_net){
                 //the node is in the network, so leave
                 //cmd_leave();
             }
@@ -117,7 +126,7 @@ int process_command(char *input, Cmd_V* cmd_variables, UDP_S* Server){
                 return 3;
             }
 
-            return_code = cmd_show_nodes(arguments[0], Server);
+            return_code = cmd_show_nodes(arguments[0], My_node);
 
             return return_code;
 
@@ -149,7 +158,7 @@ int process_command(char *input, Cmd_V* cmd_variables, UDP_S* Server){
                 return 3;
             }
 
-            return_code = is_id_in_net(&does_id_exist ,arguments[0], arguments[1], Server);
+            return_code = is_id_in_net(&does_id_exist ,arguments[0], arguments[1], My_node);
 
             if(return_code != 0){
                 return return_code;
@@ -161,9 +170,9 @@ int process_command(char *input, Cmd_V* cmd_variables, UDP_S* Server){
                 return 0;
             }
 
-            cmd_variables->is_node_in_net = true;
+            My_node->is_node_in_net = true;
 
-            return_code = cmd_join(arguments[0], arguments[1], Server);
+            return_code = cmd_join(arguments[0], arguments[1], My_node);
 
             return return_code;
 
@@ -194,13 +203,13 @@ int process_command(char *input, Cmd_V* cmd_variables, UDP_S* Server){
     }
 }
 
-int cmd_show_nodes(char* net, UDP_S* Server){
+int cmd_show_nodes(char* net, Node_info* My_node){
     char message[Max_message_len], *response, op;
     int response_len, return_code;
 
     sprintf(message, "NODES 100 0 %s\n", net);
 
-    return_code = send_message_to_UDP_server(message, &response, &response_len, Server);
+    return_code = send_message_to_UDP_server(message, &response, &response_len, My_node);
 
     if(return_code != 0){
         return return_code;
@@ -296,18 +305,16 @@ void cmd_leave(char* net, char* id, UDP_S* Server){
 
 }
 
-int cmd_join(char* net, char* id, UDP_S* Server){
+int cmd_join(char* net, char* id, Node_info* My_node){
     char message[Max_message_len], *response, op;
     int response_len, return_code;
-
-    char* new_IP, *new_Port;
 
     //get_new_ip_and_Port(&new_IP, &new_Port);
     //está associado a OWR IP TCP regIP regUDP
     
-    sprintf(message, "REG 100 0 %s %s %s %s\n", net, id, new_IP, new_Port);
+    sprintf(message, "REG 100 0 %s %s %s %s\n", net, id, My_node->Node_TCP_IP, My_node->Node_TCP_Port);
 
-    return_code = send_message_to_UDP_server(message, &response, &response_len, Server);
+    return_code = send_message_to_UDP_server(message, &response, &response_len, My_node);
 
     if(return_code != 0){
         return return_code;
@@ -353,7 +360,7 @@ int get_neighbours(){
     return;
 }
 
-int is_id_in_net(bool* is_id_in_net ,char* net, char* id, UDP_S* Server){
+int is_id_in_net(bool* is_id_in_net ,char* net, char* id, Node_info* My_node){
     char message[Max_message_len];
     char* response, op;
     int response_len, return_code;
@@ -361,7 +368,7 @@ int is_id_in_net(bool* is_id_in_net ,char* net, char* id, UDP_S* Server){
     sprintf(message, "CONTACT 100 0 %s %s\n", net, id);
    
 
-    return_code = send_message_to_UDP_server(message, &response, &response_len, Server);
+    return_code = send_message_to_UDP_server(message, &response, &response_len, My_node);
 
     if(return_code != 0){
         return return_code;
@@ -399,7 +406,7 @@ int is_id_in_net(bool* is_id_in_net ,char* net, char* id, UDP_S* Server){
 
 
 //response needs to be freed outside the function (if it has error no need to free response)
-int send_message_to_UDP_server(char* message, char** response, int* response_len, UDP_S* Server){
+int send_message_to_UDP_server(char* message, char** response, int* response_len, Node_info* My_node){
     int fd,errcode;
     ssize_t n;
     socklen_t addrlen;
@@ -414,7 +421,7 @@ int send_message_to_UDP_server(char* message, char** response, int* response_len
     hints.ai_family=AF_INET; //IPv4
     hints.ai_socktype=SOCK_DGRAM; //UDP socket
 
-    errcode=getaddrinfo(Server->IP,Server->Port,&hints,&res);
+    errcode=getaddrinfo(My_node->UDP_Server_IP, My_node->Node_TCP_Port, &hints, &res);
     if(errcode!=0) /*error*/ return 5;
 
     n=sendto(fd,message,strlen(message),0,res->ai_addr,res->ai_addrlen);

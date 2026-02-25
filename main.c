@@ -26,49 +26,21 @@ typedef struct _Node_information{
     //TCP info for node to node connection
     char Node_TCP_IP[Max_IP_len];
     char Node_TCP_Port[Max_Port_len];
+    int Node_TCP_Server_fd;
 
     //UDP info for node to network connection
     char UDP_Server_IP[Max_IP_len];
     char UDP_Server_Port[Max_Port_len];
+    char id[3];
 
     //flags
-    bool is_node_in_net;
+    bool is_in_net;
     bool is_monitoring;
 }Node_info;
 
 int main(int argc, char *argv[]){
     
-
-    if(argc == 5){
-        if(is_IP_invalid(argv[1])){
-            printf("IP used in ./OWR --> IP <-- TCP regIP regUDP does not folow the standard IPv4 structure\n");
-            return 0;
-        }
-        if(is_Port_invalid(argv[2])){
-            printf("TCP Port used in ./OWR IP --> TCP <-- regIP regUDP does not folow the standard Port structure\n");
-            return 0;
-        }
-        if(is_IP_invalid(argv[3])){
-            printf("IP used in ./OWR IP TCP --> regIP <-- regUDP does not folow the standard IPv4 structure\n");
-            return 0;
-        }
-        if(is_Port_invalid(argv[4])){
-            printf("UDP Port used in ./OWR IP TCP regIP --> regUDP <-- does not folow the standard Port structure\n");
-            return 0;
-        }
-    }else if(argc == 3){
-        if(is_IP_invalid(argv[1])){
-            printf("IP used in ./OWR --> IP <-- TCP does not folow the standard IPv4 structure\n");
-            return 0;
-        }
-        if(is_Port_invalid(argv[2])){
-            printf("TCP Port used in ./OWR IP --> TCP <-- does not folow the standard Port structure\n");
-            return 0;
-        }
-    }else{
-        printf("Comand format is incorrect.\nUsage: ./OWR IP TCP regIP regUDP\n");
-        return 0;
-    }
+    Check_argv_format(argv, argc);
     
     Node_info* My_node = init_Node(argv, argc);
 
@@ -82,6 +54,10 @@ int main(int argc, char *argv[]){
     while(true){
         FD_ZERO(&fdset);
         FD_SET(STDIN_FILENO, &fdset);
+
+        if(My_node->is_in_net){
+            FD_SET(,&fdset);
+        }
         
 
         switch (select(nfds, &fdset, NULL, NULL, NULL))
@@ -110,21 +86,55 @@ int main(int argc, char *argv[]){
     return 0;
 }
 
+void Check_argv_format(char** argv, int argc){
+    if(argc == 5){
+        if(is_IP_invalid(argv[1])){
+            printf("IP used in ./OWR --> IP <-- TCP regIP regUDP does not folow the standard IPv4 structure\n");
+            return 0;
+        }
+        if(is_Port_invalid(argv[2])){
+            printf("TCP Port used in ./OWR IP --> TCP <-- regIP regUDP does not folow the standard Port structure\n");
+            return 0;
+        }
+        if(is_IP_invalid(argv[3])){
+            printf("regIP used in ./OWR IP TCP --> regIP <-- regUDP does not folow the standard IPv4 structure\n");
+            return 0;
+        }
+        if(is_Port_invalid(argv[4])){
+            printf("UDP Port used in ./OWR IP TCP regIP --> regUDP <-- does not folow the standard Port structure\n");
+            return 0;
+        }
+    }else if(argc == 3){
+        if(is_IP_invalid(argv[1])){
+            printf("IP used in ./OWR --> IP <-- TCP does not folow the standard IPv4 structure\n");
+            return 0;
+        }
+        if(is_Port_invalid(argv[2])){
+            printf("TCP Port used in ./OWR IP --> TCP <-- does not folow the standard Port structure\n");
+            return 0;
+        }
+    }else{
+        printf("Comand format is incorrect.\nUsage: ./OWR IP TCP regIP regUDP\n");
+        return 0;
+    }
+}
+
 bool is_IP_invalid(char* IP) {
     int a, b, c, d;
     int last_index = 0;
 
-    // %n stores the index of the last element into
+    // %n stores the index of the last element into last_index
     if (sscanf(IP, "%d.%d.%d.%d%n", &a, &b, &c, &d, &last_index) != 4) {
+        //inalid format
         return true; 
     }
 
-    // Se o número de caracteres lidos pelo sscanf for diferente do 
-    // tamanho total da string, significa que sobrou "lixo" no final.
+    //if the last_index is no a end of string the IP contains extra chars
     if (IP[last_index] != '\0') {
         return true;
     }
 
+    //check if the numbers are between the porper values
     if (a < 0 || a > 255 || b < 0 || b > 255 || 
         c < 0 || c > 255 || d < 0 || d > 255) {
         return true;
@@ -135,13 +145,14 @@ bool is_IP_invalid(char* IP) {
 
 bool is_Port_invalid(char* Port) {
     char* endptr;
-    // Converte string para long, endptr aponta onde a conversão parou
+    // Convert string to long, endptr stores the end conversion point
     long p = strtol(Port, &endptr, 10);
 
-    // Se endptr ainda aponta para Port, não era um número.
-    // Se *endptr não for \0, havia lixo (ex: "8080abc")
+    
+    // if *endptr is not \0, there was thrash in the sring
     if (Port == endptr || *endptr != '\0') return true;
 
+    //check if it is a valid Port
     if (p < 1 || p > 65535) return true;
 
     return false;
@@ -165,7 +176,7 @@ Node_info* init_Node(char** argv, int argc){
         strcpy(My_node->UDP_Server_Port, DEFAULT_UDP_PORT);
     }
 
-    My_node->is_node_in_net = false;
+    My_node->is_in_net = false;
     My_node->is_monitoring = false;
 
     return My_node;
@@ -178,23 +189,21 @@ Node_info* init_Node(char** argv, int argc){
 //return 2 return to main to with network error
 //return 3 return to main to with incorrect input
 //return 4 return to main to exit the program with memory allocation error
-//return 5 return to main to exit the program with connection via UDP or TCP error
+//return 5 return to main to exit the program with seting up UDP or TCP error
 //return 6 return to main to exit the program with not suposed to happend case
 int process_command(char *input, Node_info* My_node){
     char arguments[Max_cmd_arguments][Max_cmd_len], cmd[Max_cmd_len];
     int num_args, return_code;
     
-    bool does_id_exist;
-    
     num_args = sscanf(input, "%s %s %s %s", &cmd, &arguments[0], &arguments[1], &arguments[2]);
 
     if(num_args == 1){
         if(!strcmp(cmd, "l")){
-            if(My_node->is_node_in_net){
+            if(My_node->is_in_net){
                 //the node is in the network, so leave
                 //cmd_leave();
 
-                My_node->is_node_in_net = false;
+                My_node->is_in_net = false;
 
                 return 0;
             }else{
@@ -208,7 +217,7 @@ int process_command(char *input, Node_info* My_node){
         }else if(!strcmp(cmd, "x")){
 
             //in case we forget to leave before exiting
-            if(My_node->is_node_in_net){
+            if(My_node->is_in_net){
                 //the node is in the network, so leave
                 //cmd_leave();
             }
@@ -260,41 +269,7 @@ int process_command(char *input, Node_info* My_node){
 
         if(!strcmp(cmd, "j")){
 
-            if(atoi(arguments[0]) > 999 || atoi(arguments[0]) < 0){
-                //error net value should be between 999 and 000
-                printf("ERROR: input argument net should be between 000 and 999\n");
-                return 3;
-            }
-
-            if(atoi(arguments[1]) > 99 || atoi(arguments[1]) < 0){
-                //error id value should be between 99 and 00
-                printf("ERROR: input argument id should be between 00 and 99\n");
-                return 3;
-            }
-
-            if(My_node->is_node_in_net){
-                //no need to join node is already in th network
-
-
-            }
-
-            return_code = is_id_in_net(&does_id_exist ,arguments[0], arguments[1], My_node);
-
-            if(return_code != 0){
-                return return_code;
-            }
-
-            if(does_id_exist){
-                //error id already exists must use a difrent one
-                printf("The id chosen (%s) is in use. Must use a difrent id to add the node to the network %s\n", arguments[1], arguments[0]);
-                return 0;
-            }
-
-            My_node->is_node_in_net = true;
-
-            return_code = cmd_join(arguments[0], arguments[1], My_node);
-
-            return return_code;
+            return cmd_join(arguments, My_node);
 
         }else if(!strcmp(cmd, "m")){
 
@@ -321,6 +296,114 @@ int process_command(char *input, Node_info* My_node){
         printf("DEBUG ERROR: (in function process_command) if we are reading this the sscanf returned an unexpected number (not suposed to do that)\n");
         return 6;
     }
+}
+
+int cmd_join(char** arguments, Node_info* My_node){
+    int return_code;
+    bool does_id_exist;
+
+    if(atoi(arguments[0]) > 999 || atoi(arguments[0]) < 0){
+        //error net value should be between 999 and 000
+        printf("ERROR: input argument net should be between 000 and 999\n");
+        return 3;
+    }
+
+    if(atoi(arguments[1]) > 99 || atoi(arguments[1]) < 0){
+        //error id value should be between 99 and 00
+        printf("ERROR: input argument id should be between 00 and 99\n");
+        return 3;
+    }
+
+    if(My_node->is_in_net){
+        //no need to join node is already in th network
+        printf("The node is allready in the network\n");
+        return 0;
+    }
+
+    return_code = is_id_in_net(&does_id_exist ,arguments[0], arguments[1], My_node);
+
+    if(return_code != 0){
+        return return_code;
+    }
+
+    if(does_id_exist){
+        //error id already exists must use a difrent one
+        printf("The id chosen (%s) is in use. Must use a difrent id to add the node to the network %s\n", arguments[1], arguments[0]);
+        return 0;
+    }
+
+    
+
+    return_code = add_id_to_net(arguments[0], arguments[1], My_node);
+
+    if(return_code != 0){
+        if(return_code == 7){
+            return 0;
+        }
+        return return_code;
+    }
+
+    strcpy(My_node->id, arguments[1]);
+    My_node->is_in_net = true;
+
+    return_code = Create_TCP_Server();
+
+    return return_code;
+
+}
+
+int Create_TCP_Server(Node_info* My_node){
+    int errcode;
+    ssize_t n;
+    struct addrinfo hints,*res;
+
+    My_node->Node_TCP_Server_fd=socket(AF_INET,SOCK_STREAM,0); //TCP socket
+    if (My_node->Node_TCP_Server_fd==-1) return 5; //error
+
+    memset(&hints,0,sizeof hints);
+    hints.ai_family=AF_INET; //IPv4
+    hints.ai_socktype=SOCK_STREAM; //TCP socket
+    hints.ai_flags=AI_PASSIVE;
+
+    errcode=getaddrinfo(NULL,My_node->Node_TCP_Port,&hints,&res);
+    if((errcode)!=0)/*error*/return 5;
+
+    n=bind(My_node->Node_TCP_Server_fd,res->ai_addr,res->ai_addrlen);
+    if(n==-1) /*error*/ return 5;
+
+    if(listen(My_node->Node_TCP_Server_fd,5)==-1)/*error*/return 5;
+
+    freeaddrinfo(res);
+
+   return 0;
+}
+
+int accept_TCP_connection(Node_info* My_node){
+    ssize_t n;
+    socklen_t addrlen;
+    struct sockaddr_in addr;
+    char buffer[128];
+
+     while(1){
+        addrlen=sizeof(addr);
+        if((newfd=accept(My_node->Node_TCP_Server_fd,(struct sockaddr*)&addr,&addrlen))==-1)
+        /*error*/ exit(1);
+
+        n=read(newfd,buffer,128);
+        if(n==-1)/*error*/exit(1);
+
+        write(1,"received: ",10);
+        write(1,buffer,n);
+
+        n=write(newfd,buffer,n);
+        if(n==-1)/*error*/exit(1);
+
+        close(newfd);
+    }
+
+    close(My_node->Node_TCP_Server_fd);
+
+    return 0;
 }
 
 int cmd_show_nodes(char* net, Node_info* My_node){
@@ -425,7 +508,8 @@ void cmd_leave(char* net, char* id, UDP_S* Server){
 
 }
 
-int cmd_join(char* net, char* id, Node_info* My_node){
+//return 7 means the net is full
+int add_id_to_net(char* net, char* id, Node_info* My_node){
     char message[Max_message_len], *response, op;
     int response_len, return_code;
 
@@ -454,7 +538,7 @@ int cmd_join(char* net, char* id, Node_info* My_node){
             printf("id was not registred in the network because its full\n");
 
             free(response);
-            return 0;
+            return 7;
         }else{
             //error code from network
             printf("ERROR: error code (%c) from network using this comand %s\n", op, message);
@@ -464,7 +548,7 @@ int cmd_join(char* net, char* id, Node_info* My_node){
         }
     }else{
         //response is not as expected
-        printf("DEBUG ERROR: (in function cmd_join) if we are reading this the server sent a bad formated response (not suposed to do that)\n");
+        printf("DEBUG ERROR: (in function add_id_to_net) if we are reading this the server sent a bad formated response (not suposed to do that)\n");
         free(response);
         return 6;
     }
@@ -518,7 +602,7 @@ int is_id_in_net(bool* is_id_in_net ,char* net, char* id, Node_info* My_node){
         }
     }else{
         //response is not as expected
-        printf("DEBUG ERROR: (in function cmd_join) if we are reading this the server sent a bad formated response (not suposed to do that)\n");
+        printf("DEBUG ERROR: (in function add_id_to_net) if we are reading this the server sent a bad formated response (not suposed to do that)\n");
         free(response);
         return 6;
     }

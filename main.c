@@ -21,20 +21,21 @@
 #define Max_IP_len 16 // in the worse case we have xxx.xxx.xxx.xxx\0 that is 16 chars
 #define Max_Port_len 6 // in the worse case we have xxxxx\0 that is 6 chars
 #define Number_of_ids 100 // we have ids between 00 and 99, so 100 in total
+#define Id_len 3 // ids are two digit numbers so xx\0 thet is 3 chars
 
 typedef struct _Node_information{
     //TCP info for node to node connection
     char Node_TCP_IP[Max_IP_len];
     char Node_TCP_Port[Max_Port_len];
-    int Node_TCP_Server_fd;
-    int Node_TCP_client_fd[Number_of_ids];
+    int TCP_fd[Number_of_ids];
+    int number_of_TCP_chanels;
 
     //UDP info for node to network connection
     char UDP_Server_IP[Max_IP_len];
     char UDP_Server_Port[Max_Port_len];
 
     //Node info
-    char id[3];
+    char id[Id_len];
     char net[4];
     int dist[Number_of_ids];
     int succ[Number_of_ids];
@@ -55,19 +56,34 @@ int main(int argc, char *argv[]){
 
 
 
-    int nfds;
+    int nfds, i, n_con;
     fd_set fdset;
 
     while(true){
         FD_ZERO(&fdset);
         FD_SET(STDIN_FILENO, &fdset);
 
-        if(My_node->is_in_net){
-            FD_SET(My_node->Node_TCP_Server_fd,&fdset);
-        }
-        
+        nfds = STDIN_FILENO;
 
-        switch (select(nfds, &fdset, NULL, NULL, NULL))
+        if(My_node->is_in_net){
+
+            FD_SET(My_node->TCP_fd[atoi(My_node->id)],&fdset);
+
+            nfds = max(nfds, My_node->TCP_fd[atoi(My_node->id)]);
+        
+            for(i = 0, n_con = 0; i < Number_of_ids; i++){
+                if(My_node->TCP_fd[i] != -1){
+                    if(i =! atoi(My_node->id)){
+                        n_con++;
+                        FD_SET(My_node->TCP_fd[i],&fdset);
+                        nfds = max(nfds, My_node->TCP_fd[i]);
+                    }
+                    if(n_con == My_node->number_of_TCP_chanels) break;
+                }
+            }
+        }
+
+        switch (select(nfds+1, &fdset, NULL, NULL, NULL))
         {
         case 0:
             //timeout
@@ -83,21 +99,38 @@ int main(int argc, char *argv[]){
 
             } 
             if(My_node->is_in_net){
-                if(FD_ISSET(My_node->Node_TCP_Server_fd,&fdset)){
+                if(FD_ISSET(My_node->TCP_fd[atoi(My_node->id)],&fdset)){
                     //A client is trying to connect need to accept
 
 
                 }
+
+                for(i = 0, n_con = 0; i < Number_of_ids; i++){
+                    if(My_node->TCP_fd[i] != -1){
+                        if(i =! atoi(My_node->id)){
+                            n_con++;
+                            if(FD_ISSET(My_node->TCP_fd[i],&fdset)){
+                                //the id (i) is sending us a message
+
+                                
+
+                            }
+                        }
+                        if(n_con == My_node->number_of_TCP_chanels) break;
+                    }
+                }
+
             }
-            
             break;
         }
-
-
-
     }
 
     return 0;
+}
+
+int max(int a, int b)
+{
+    return a > b ? a : b;
 }
 
 void print_help(void){
@@ -212,8 +245,10 @@ Node_info* init_Node(char** argv, int argc){
         My_node->dist[i] = -1;
         My_node->succ[i] = -1;
         My_node->state[i] = 0;
-        My_node->Node_TCP_client_fd[i] = -1;
+        My_node->TCP_fd[i] = -1;
     }
+
+    My_node->number_of_TCP_chanels = 0;
 
     My_node->is_in_net = false;
     My_node->is_monitoring = false;
@@ -395,8 +430,8 @@ int Create_TCP_Server(Node_info* My_node){
     ssize_t n;
     struct addrinfo hints,*res;
 
-    My_node->Node_TCP_Server_fd=socket(AF_INET,SOCK_STREAM,0); //TCP socket
-    if (My_node->Node_TCP_Server_fd==-1) return 5; //error
+    My_node->TCP_fd[atoi(My_node->id)]=socket(AF_INET,SOCK_STREAM,0); //TCP socket
+    if (My_node->TCP_fd[atoi(My_node->id)]==-1) return 5; //error
 
     memset(&hints,0,sizeof hints);
     hints.ai_family=AF_INET; //IPv4
@@ -406,29 +441,39 @@ int Create_TCP_Server(Node_info* My_node){
     errcode=getaddrinfo(NULL,My_node->Node_TCP_Port,&hints,&res);
     if((errcode)!=0)/*error*/return 5;
 
-    n=bind(My_node->Node_TCP_Server_fd,res->ai_addr,res->ai_addrlen);
+    n=bind(My_node->TCP_fd[atoi(My_node->id)],res->ai_addr,res->ai_addrlen);
     if(n==-1) /*error*/ return 5;
 
-    if(listen(My_node->Node_TCP_Server_fd,5)==-1)/*error*/return 5;
+    if(listen(My_node->TCP_fd[atoi(My_node->id)],5)==-1)/*error*/return 5;
 
     freeaddrinfo(res);
 
    return 0;
 }
 
-int accept_TCP_connection(int* newfd, Node_info* My_node){
+int accept_TCP_connection(Node_info* My_node){
+    ssize_t n;
     socklen_t addrlen;
     struct sockaddr_in addr;
+    int newfd;
+    char cli_id[Id_len];
 
     addrlen=sizeof(addr);
-    if((*newfd=accept(My_node->Node_TCP_Server_fd,(struct sockaddr*)&addr,&addrlen))==-1)
+    if((newfd=accept(My_node->TCP_fd[atoi(My_node->id)],(struct sockaddr*)&addr,&addrlen))==-1)
     /*error*/ return 5;
+
+    n=read(newfd,cli_id,3);
+    if(n==-1)/*error*/return 5;
+
+    My_node->TCP_fd[atoi(cli_id)] = newfd;
+
+    My_node->number_of_TCP_chanels++;
 
     return 0;
 }
 
 int Close_TCP_Server(Node_info* My_node){
-    close(My_node->Node_TCP_Server_fd);
+    close(My_node->TCP_fd[atoi(My_node->id)]);
     return 0;
 }
 
@@ -437,8 +482,8 @@ int Create_and_Connect_TCP_client(char* dest_IP, char* dest_Port, char* dest_id,
     ssize_t n;
     struct addrinfo hints,*res;
 
-    My_node->Node_TCP_client_fd[atoi(dest_id)]=socket(AF_INET,SOCK_STREAM,0); //TCP socket
-    if (My_node->Node_TCP_client_fd[atoi(dest_id)]==-1) return 5; //error
+    My_node->TCP_fd[atoi(dest_id)]=socket(AF_INET,SOCK_STREAM,0); //TCP socket
+    if (My_node->TCP_fd[atoi(dest_id)]==-1) return 5; //error
 
     memset(&hints,0,sizeof hints);
     hints.ai_family=AF_INET; //IPv4
@@ -447,8 +492,13 @@ int Create_and_Connect_TCP_client(char* dest_IP, char* dest_Port, char* dest_id,
     errcode=getaddrinfo(dest_IP,dest_Port,&hints,&res);
     if(errcode!=0)/*error*/return 5;
 
-    n=connect(My_node->Node_TCP_client_fd[atoi(dest_id)],res->ai_addr,res->ai_addrlen);
+    n=connect(My_node->TCP_fd[atoi(dest_id)],res->ai_addr,res->ai_addrlen);
     if(n==-1)/*error*/return 5;
+
+    n=write(My_node->TCP_fd[atoi(dest_id)],My_node->id,3);
+    if(n==-1)/*error*/return 5;
+
+    My_node->number_of_TCP_chanels++;
 
     freeaddrinfo(res);
 
@@ -456,7 +506,7 @@ int Create_and_Connect_TCP_client(char* dest_IP, char* dest_Port, char* dest_id,
 }
 
 int Close_TCP_Client(char* dest_id, Node_info* My_node){
-    close(My_node->Node_TCP_client_fd[atoi(dest_id)]);
+    close(My_node->TCP_fd[atoi(dest_id)]);
 }
 
 int cmd_add_edge(char* dest_id, Node_info* My_node){

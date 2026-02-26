@@ -474,6 +474,9 @@ int accept_TCP_connection(Node_info* My_node){
 
 int Close_TCP_Server(Node_info* My_node){
     close(My_node->TCP_fd[atoi(My_node->id)]);
+
+    My_node->TCP_fd[atoi(My_node->id)] = -1;
+
     return 0;
 }
 
@@ -507,6 +510,11 @@ int Create_and_Connect_TCP_client(char* dest_IP, char* dest_Port, char* dest_id,
 
 int Close_TCP_Client(char* dest_id, Node_info* My_node){
     close(My_node->TCP_fd[atoi(dest_id)]);
+
+    My_node->TCP_fd[atoi(dest_id)] = -1;
+    My_node->number_of_TCP_chanels--;
+
+    return 0;
 }
 
 int cmd_add_edge(char* dest_id, Node_info* My_node){

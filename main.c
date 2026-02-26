@@ -277,7 +277,7 @@ int process_command(char *input, Node_info* My_node){
             if(My_node->is_in_net){
                 //the node is in the network, so leave
                 //cmd_leave();
-
+                
                 My_node->is_in_net = false;
 
                 return 0;
@@ -616,39 +616,41 @@ int print_ids(char* response, int response_len, char* net){
     }
 }
 
-void cmd_leave(char* net, char* id, UDP_S* Server){
-    char message[Max_message_len], *response, op;
-    int sizeof_response, n_neighbours;
-    char* new_IP, *new_Port;
-    get_new_ip_and_Port(&new_IP, &new_Port);
-    //está associado a OWR IP TCP regIP regUDP
-
-    get_neighbours();
-
-    for(int i = 0; i < n_neighbours; i++){
-        cmd_remove_edge(char* net, char* id, UDP_S* Server);
+void cmd_leave(Node_info* My_node){
+    char message[Max_message_len], *response, op, neigbours[Number_of_ids][Id_len];
+    int n_neighbours, i;
+    
+    //loop para verificar quantos vizinhos tem e quais são...
+     for(i = 0, n_con = 0; i < Number_of_ids; i++){
+                if(My_node->TCP_fd[i] != -1){
+                    if(i =! atoi(My_node->id)){
+                        sprintf(neigbours[n_con], "%02d", i);
+                        n_con++;
+                    }
+                    if(n_con == My_node->number_of_TCP_chanels) break;
+                }
+            }
+    //loop para fechar ligação tcp com os vizinhos...
+    for(i = 0; i < n_con; i++){
+        cmd_remove_edge(neigbours[i], My_node);
     }
 
-   
-
-    sprintf(message, "REG 100 3 %s %s %s %s\n", net, id, new_IP, new_Port);
-    send_message_to_UDP_server(message, &response, &sizeof_response, Server);
+    sprintf(message, "REG 100 3 %s %s\n", My_node->net, My_node->id);
+    send_message_to_UDP_server(message, &response, Server);
     int items_found = sscanf(response, "%*s %*s %c", &op);
-
-    
     if (items_found == 1) {
         if (op == '4') {
             // id succesfully left
             free(response);
-            return;
-        
+            Close_TCP_Server(Node_info* My_node);
+            return 0;
         }else{
-            //error code from network
+        //error code from network
+        free(response);
+        return 2 ;
         }
     }
-
-    free(response);
-    return;
+    
 
 }
 
@@ -699,7 +701,15 @@ int add_id_to_net(char* net, char* id, Node_info* My_node){
 }
 
 
-void cmd_remove_edge(char* net, char* id, UDP_S* Server){
+void cmd_remove_edge(char* id_to_remove, Node_info* My_node){
+    int return_code;
+    if(!My_node->is_in_net){
+        //mensagem de erro que o node n existe na net
+    }
+    if(My_node->TCP_fd[atoi(id_to_remove)] == -1){
+        //mensagem de erro que o node n é vizinho
+    }
+
 
 }
 

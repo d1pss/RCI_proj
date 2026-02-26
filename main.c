@@ -27,11 +27,18 @@ typedef struct _Node_information{
     char Node_TCP_IP[Max_IP_len];
     char Node_TCP_Port[Max_Port_len];
     int Node_TCP_Server_fd;
+    int Node_TCP_client_fd[Number_of_ids];
 
     //UDP info for node to network connection
     char UDP_Server_IP[Max_IP_len];
     char UDP_Server_Port[Max_Port_len];
+
+    //Node info
     char id[3];
+    char net[4];
+    int dist[Number_of_ids];
+    int succ[Number_of_ids];
+    bool state[Number_of_ids];
 
     //flags
     bool is_in_net;
@@ -56,7 +63,7 @@ int main(int argc, char *argv[]){
         FD_SET(STDIN_FILENO, &fdset);
 
         if(My_node->is_in_net){
-            FD_SET(,&fdset);
+            FD_SET(My_node->Node_TCP_Server_fd,&fdset);
         }
         
 
@@ -72,9 +79,16 @@ int main(int argc, char *argv[]){
         
         default:
             if(FD_ISSET(STDIN_FILENO, &fdset)){
-
+                //recived a terminal command
 
             } 
+            if(My_node->is_in_net){
+                if(FD_ISSET(My_node->Node_TCP_Server_fd,&fdset)){
+                    //A client is trying to connect need to accept
+
+
+                }
+            }
             
             break;
         }
@@ -84,6 +98,24 @@ int main(int argc, char *argv[]){
     }
 
     return 0;
+}
+
+void print_help(void){
+    printf("join (j) net id .   .   .   .   .   . | register node as (id) in the (net)\n\\
+            show nodes (n) net  .   .   .   .   . | print nodes registred in (net)\n\\
+            leave (l)   .   .   .   .   .   .   . | unregister node\n\\
+            exit (x)    .   .   .   .   .   .   . | exit the program\n\\
+            add edge (ae) id    .   .   .   .   . | create a TCP chanel between node and destiny (id)\n\\
+            remove edge (re) id .   .   .   .   . | closes the TCP chanel between node and destiny (id)\n\\
+            show neighbors (sg) .   .   .   .   . | print the ids directly connected to the node\n\\
+            announce (a)    .   .   .   .   .   . | announce the node to the other nodes in the network\n\\
+            show routing (sr) dest  .   .   .   . | ---falta escrever---\n\\
+            start monitor (sm)  .   .   .   .   . | ---falta escrever---\n\\
+            end monitor (em)    .   .   .   .   . | ---falta escrever---\n\\
+            message (m) dest message    .   .   . | send (message) to node (dest)\n\\
+            direct join (dj) net id .   .   .   . | ---falta escrever---\n\\
+            direct add edge (dae) id idIP idTCP . | ---falta escrever---\n");
+    return;
 }
 
 void Check_argv_format(char** argv, int argc){
@@ -174,6 +206,13 @@ Node_info* init_Node(char** argv, int argc){
     }else{
         strcpy(My_node->UDP_Server_IP, DEFAULT_UDP_IP);
         strcpy(My_node->UDP_Server_Port, DEFAULT_UDP_PORT);
+    }
+
+    for(int i = 0; i < Number_of_ids; i++){
+        My_node->dist[i] = -1;
+        My_node->succ[i] = -1;
+        My_node->state[i] = 0;
+        My_node->Node_TCP_client_fd[i] = -1;
     }
 
     My_node->is_in_net = false;
@@ -320,7 +359,7 @@ int cmd_join(char** arguments, Node_info* My_node){
         return 0;
     }
 
-    return_code = is_id_in_net(&does_id_exist ,arguments[0], arguments[1], My_node);
+    return_code = get_id_info(&does_id_exist ,arguments[0], arguments[1], My_node);
 
     if(return_code != 0){
         return return_code;
@@ -332,8 +371,6 @@ int cmd_join(char** arguments, Node_info* My_node){
         return 0;
     }
 
-    
-
     return_code = add_id_to_net(arguments[0], arguments[1], My_node);
 
     if(return_code != 0){
@@ -343,10 +380,11 @@ int cmd_join(char** arguments, Node_info* My_node){
         return return_code;
     }
 
+    strcpy(My_node->net, arguments[0]);
     strcpy(My_node->id, arguments[1]);
     My_node->is_in_net = true;
 
-    return_code = Create_TCP_Server();
+    return_code = Create_TCP_Server(My_node);
 
     return return_code;
 
@@ -378,30 +416,77 @@ int Create_TCP_Server(Node_info* My_node){
    return 0;
 }
 
-int accept_TCP_connection(Node_info* My_node){
-    ssize_t n;
+int accept_TCP_connection(int* newfd, Node_info* My_node){
     socklen_t addrlen;
     struct sockaddr_in addr;
-    char buffer[128];
 
-     while(1){
-        addrlen=sizeof(addr);
-        if((newfd=accept(My_node->Node_TCP_Server_fd,(struct sockaddr*)&addr,&addrlen))==-1)
-        /*error*/ exit(1);
+    addrlen=sizeof(addr);
+    if((*newfd=accept(My_node->Node_TCP_Server_fd,(struct sockaddr*)&addr,&addrlen))==-1)
+    /*error*/ return 5;
 
-        n=read(newfd,buffer,128);
-        if(n==-1)/*error*/exit(1);
+    return 0;
+}
 
-        write(1,"received: ",10);
-        write(1,buffer,n);
+int Close_TCP_Server(Node_info* My_node){
+    close(My_node->Node_TCP_Server_fd);
+    return 0;
+}
 
-        n=write(newfd,buffer,n);
-        if(n==-1)/*error*/exit(1);
+int Create_and_Connect_TCP_client(char* dest_IP, char* dest_Port, char* dest_id, Node_info* My_node){
+    int errcode;
+    ssize_t n;
+    struct addrinfo hints,*res;
 
-        close(newfd);
+    My_node->Node_TCP_client_fd[atoi(dest_id)]=socket(AF_INET,SOCK_STREAM,0); //TCP socket
+    if (My_node->Node_TCP_client_fd[atoi(dest_id)]==-1) return 5; //error
+
+    memset(&hints,0,sizeof hints);
+    hints.ai_family=AF_INET; //IPv4
+    hints.ai_socktype=SOCK_STREAM; //TCP socket
+
+    errcode=getaddrinfo(dest_IP,dest_Port,&hints,&res);
+    if(errcode!=0)/*error*/return 5;
+
+    n=connect(My_node->Node_TCP_client_fd[atoi(dest_id)],res->ai_addr,res->ai_addrlen);
+    if(n==-1)/*error*/return 5;
+
+    freeaddrinfo(res);
+
+    return 0;
+}
+
+int Close_TCP_Client(char* dest_id, Node_info* My_node){
+    close(My_node->Node_TCP_client_fd[atoi(dest_id)]);
+}
+
+int cmd_add_edge(char* dest_id, Node_info* My_node){
+    int return_code;
+    char dest_ip[Max_IP_len], dest_Port[Max_Port_len];
+    bool is_dest_id_in_net;
+
+    if(!My_node->is_in_net){
+        printf("Origin node is not in the network use the join comand first\n");
+        return 0;
     }
 
-    close(My_node->Node_TCP_Server_fd);
+    return_code = get_id_info(&dest_ip, &dest_Port, &is_dest_id_in_net, My_node->net, dest_id, My_node);
+
+    if(return_code != 0){
+        return return_code;
+    }
+
+    if(!is_dest_id_in_net){
+        printf("The destiny id does not exist in network use show nodes to know the ids in network\n");
+        return 0;
+    }
+
+    return_code = Create_and_Connect_TCP_client(dest_ip, dest_Port, dest_id, My_node);
+
+    if(return_code != 0){
+        return return_code;
+    }
+
+
 
     return 0;
 }
@@ -564,7 +649,7 @@ int get_neighbours(){
     return;
 }
 
-int is_id_in_net(bool* is_id_in_net ,char* net, char* id, Node_info* My_node){
+int get_id_info(char** id_IP ,char** id_Port ,bool* get_id_info ,char* net, char* id, Node_info* My_node){
     char message[Max_message_len];
     char* response, op;
     int response_len, return_code;
@@ -578,18 +663,18 @@ int is_id_in_net(bool* is_id_in_net ,char* net, char* id, Node_info* My_node){
         return return_code;
     }
  
-    int items_found = sscanf(response, "%*s %*s %c", &op);
+    int items_found = sscanf(response, "%*s %*s %c %*s %s %s", &op, id_IP, id_Port);
 
-    if (items_found == 1) {
+    if (items_found == 1 || items_found == 3) {
         if (op == '1') {
-            // ID already exists
-            *is_id_in_net = true;
+            // ID exists in net
+            *get_id_info = true;
 
             free(response);
             return 0;
         } else if (op == '2') {
-            // ID does not exist
-            *is_id_in_net = false;
+            // ID does not exist in net
+            *get_id_info = false;
 
             free(response);
             return 0;

@@ -51,6 +51,7 @@ int main(int argc, char *argv[]){
     Check_argv_format(argv, argc);
     
     Node_info* My_node = init_Node(argv, argc);
+    if(My_node == NULL) return 1;
 
     
 
@@ -227,7 +228,7 @@ Node_info* init_Node(char** argv, int argc){
     Node_info* My_node = (Node_info*)malloc(sizeof(Node_info));
     if(My_node == NULL){
         printf("ERROR: error alocating memory");
-        return 1;
+        return NULL;
     }
 
     strcpy(My_node->Node_TCP_IP, argv[1]);

@@ -257,6 +257,17 @@ Node_info* init_Node(char** argv, int argc){
     return My_node;
 }
 
+bool is_string_a_number(char* string){
+    char* endptr;
+    // Convert string to long, endptr stores the end conversion point
+    long p = strtol(string, &endptr, 10);
+
+    // if *endptr is not \0, there was thrash in the sring
+    if (string == endptr || *endptr != '\0') return false;
+
+    return true;
+}
+
 
 
 //return 0 return to main without error
@@ -310,7 +321,7 @@ int process_command(char *input, Node_info* My_node){
 
         }else{
             //error bad input
-            printf("The comand used (%s) is not a valid input\n", cmd);
+            printf("The comand used (%s) is not a valid input or the number of arguments for that comand is wrong\n", cmd);
             return 3;
         }
 
@@ -318,9 +329,9 @@ int process_command(char *input, Node_info* My_node){
 
         if(!strcmp(cmd, "n")){
 
-            if(atoi(arguments[0]) > 999 || atoi(arguments[0]) < 0){
+            if(!is_string_a_number(arguments[0]) || atoi(arguments[0]) > 999 || atoi(arguments[0]) < 0){
                 //error net value should be between 999 and 000
-                printf("ERROR: input argument net should be between 000 and 999\n");
+                printf("ERROR: input argument net should be a number between 000 and 999\n");
                 return 3;
             }
 
@@ -336,7 +347,7 @@ int process_command(char *input, Node_info* My_node){
 
         }else{
             //error bad input
-            printf("The comand used (%s) is not a valid input\n", cmd);
+            printf("The comand used (%s) is not a valid input or the number of arguments for that comand is wrong\n", cmd);
             return 3;
         }
 
@@ -344,7 +355,7 @@ int process_command(char *input, Node_info* My_node){
 
         if(!strcmp(cmd, "j")){
 
-            return cmd_join(arguments, My_node);
+            return cmd_join(arguments[0], arguments[1], My_node);
 
         }else if(!strcmp(cmd, "m")){
 
@@ -352,7 +363,7 @@ int process_command(char *input, Node_info* My_node){
 
         }else{
             //error bad input
-            printf("The comand used (%s) is not a valid input\n", cmd);
+            printf("The comand used (%s) is not a valid input or the number of arguments for that comand is wrong\n", cmd);
             return 3;
         }
         
@@ -362,7 +373,7 @@ int process_command(char *input, Node_info* My_node){
 
         }else{
             //error bad input
-            printf("The comand used (%s) is not a valid input\n", cmd);
+            printf("The comand used (%s) is not a valid input or the number of arguments for that comand is wrong\n", cmd);
             return 3;
         }
 
@@ -373,19 +384,19 @@ int process_command(char *input, Node_info* My_node){
     }
 }
 
-int cmd_join(char** arguments, Node_info* My_node){
+int cmd_join(char* net, char* id, Node_info* My_node){
     int return_code;
     bool does_id_exist;
 
-    if(atoi(arguments[0]) > 999 || atoi(arguments[0]) < 0){
+    if(!is_string_a_number(net) || atoi(net) > 999 || atoi(net) < 0){
         //error net value should be between 999 and 000
-        printf("ERROR: input argument net should be between 000 and 999\n");
+        printf("ERROR: input argument net should be a number between 000 and 999\n");
         return 3;
     }
 
-    if(atoi(arguments[1]) > 99 || atoi(arguments[1]) < 0){
+    if(!is_string_a_number(id) || atoi(id) > 99 || atoi(id) < 0){
         //error id value should be between 99 and 00
-        printf("ERROR: input argument id should be between 00 and 99\n");
+        printf("ERROR: input argument id should be a number between 00 and 99\n");
         return 3;
     }
 
@@ -395,7 +406,7 @@ int cmd_join(char** arguments, Node_info* My_node){
         return 0;
     }
 
-    return_code = get_id_info(&does_id_exist ,arguments[0], arguments[1], My_node);
+    return_code = get_id_info(NULL, NULL, &does_id_exist ,net, id, My_node);
 
     if(return_code != 0){
         return return_code;
@@ -403,11 +414,11 @@ int cmd_join(char** arguments, Node_info* My_node){
 
     if(does_id_exist){
         //error id already exists must use a difrent one
-        printf("The id chosen (%s) is in use. Must use a difrent id to add the node to the network %s\n", arguments[1], arguments[0]);
+        printf("The id chosen (%s) is in use. Must use a difrent id to add the node to the network %s\n", id, net);
         return 0;
     }
 
-    return_code = add_id_to_net(arguments[0], arguments[1], My_node);
+    return_code = add_id_to_net(net, id, My_node);
 
     if(return_code != 0){
         if(return_code == 7){
@@ -416,8 +427,8 @@ int cmd_join(char** arguments, Node_info* My_node){
         return return_code;
     }
 
-    strcpy(My_node->net, arguments[0]);
-    strcpy(My_node->id, arguments[1]);
+    strcpy(My_node->net, net);
+    strcpy(My_node->id, id);
     My_node->is_in_net = true;
 
     return_code = Create_TCP_Server(My_node);
@@ -721,7 +732,7 @@ int get_neighbours(){
 int get_id_info(char** id_IP ,char** id_Port ,bool* get_id_info ,char* net, char* id, Node_info* My_node){
     char message[Max_message_len];
     char* response, op;
-    int response_len, return_code;
+    int response_len, return_code, items_found;
 
     sprintf(message, "CONTACT 100 0 %s %s\n", net, id);
    
@@ -731,8 +742,12 @@ int get_id_info(char** id_IP ,char** id_Port ,bool* get_id_info ,char* net, char
     if(return_code != 0){
         return return_code;
     }
- 
-    int items_found = sscanf(response, "%*s %*s %c %*s %s %s", &op, id_IP, id_Port);
+
+    if(id_IP == NULL || id_Port == NULL){
+        items_found = sscanf(response, "%*s %*s %c %*s", &op);
+    }else{
+        items_found = sscanf(response, "%*s %*s %c %*s %s %s", &op, id_IP, id_Port);
+    }
 
     if (items_found == 1 || items_found == 3) {
         if (op == '1') {

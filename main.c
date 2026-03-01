@@ -14,7 +14,7 @@
 #include "struct_and_constants.h"
 #include "cmd.h"
 #include "cmd_aux.h"
-#include "TCP.h"
+#include "server_client_comunication.h"
 
 int main(int argc, char *argv[]){
     

@@ -1,5 +1,7 @@
-#include "TCP.h"
+#include "server_client_comunication.h"
 
+
+/********************************************************************************* -----TCP----- *********************************************************************************/
 int Create_TCP_Server(Node_info* My_node){
     int errcode;
     ssize_t n;
@@ -92,6 +94,8 @@ int Close_TCP_Client(char* dest_id, Node_info* My_node){
     return 0;
 }
 
+
+/********************************************************************************* -----UDP----- *********************************************************************************/
 
 //response needs to be freed outside the function (if it has error no need to free response)
 int send_message_to_UDP_server(char* message, char** response, int* response_len, Node_info* My_node){

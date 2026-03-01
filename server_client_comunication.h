@@ -1,5 +1,5 @@
-#ifndef TCP_H
-#define TCP_H
+#ifndef SER_CLI_COM_H
+#define SER_CLI_COM_H
 
 #define _POSIX_C_SOURCE 200112L
 #include <unistd.h>

@@ -9,10 +9,10 @@
 //return 5 return to main to exit the program with seting up UDP or TCP error
 //return 6 return to main to exit the program with not suposed to happend case
 int process_command(char *input, Node_info* My_node){
-    char arguments[Max_cmd_arguments][Max_cmd_len], cmd[Max_cmd_len];
+    char arguments[cmd_arguments][cmd_len], cmd[cmd_len];
     int num_args, return_code;
     
-    num_args = sscanf(input, "%s %s %s %s", &cmd, &arguments[0], &arguments[1], &arguments[2]);
+    num_args = sscanf(input, "%s %s %s %s", cmd, arguments[0], arguments[1], arguments[2]);
 
     if(num_args == 1){
         if(!strcmp(cmd, "l")){
@@ -113,6 +113,7 @@ int process_command(char *input, Node_info* My_node){
         printf("DEBUG ERROR: (in function process_command) if we are reading this the sscanf returned an unexpected number (not suposed to do that)\n");
         return 6;
     }
+    return 0;
 }
 
 int cmd_join(char* net, char* id, Node_info* My_node){
@@ -170,7 +171,7 @@ int cmd_join(char* net, char* id, Node_info* My_node){
 
 int cmd_add_edge(char* dest_id, Node_info* My_node){
     int return_code;
-    char dest_ip[Max_IP_len], dest_Port[Max_Port_len];
+    char dest_ip[IP_len], dest_Port[Port_len];
     bool is_dest_id_in_net;
 
     if(!My_node->is_in_net){
@@ -178,7 +179,7 @@ int cmd_add_edge(char* dest_id, Node_info* My_node){
         return 0;
     }
 
-    return_code = get_id_info(&dest_ip, &dest_Port, &is_dest_id_in_net, My_node->net, dest_id, My_node);
+    return_code = get_id_info(dest_ip, dest_Port, &is_dest_id_in_net, My_node->net, dest_id, My_node);
 
     if(return_code != 0){
         return return_code;
@@ -201,7 +202,7 @@ int cmd_add_edge(char* dest_id, Node_info* My_node){
 }
 
 int cmd_show_nodes(char* net, Node_info* My_node){
-    char message[Max_message_len], response[Max_response_size], op;
+    char message[UDP_message_len], response[UDP_response_size], op;
     int return_code;
 
     sprintf(message, "NODES 100 0 %s\n", net);
@@ -233,10 +234,10 @@ int cmd_show_nodes(char* net, Node_info* My_node){
 }
 
 void cmd_leave(Node_info* My_node){
-    char message[Max_message_len], response[Max_response_size], op, neigbours[Number_of_ids][Id_len];
+   /* char message[Max_message_len], response[Max_response_size], op, neigbours[Number_of_ids][Id_len];
     int n_neighbours, i;
     
-    //loop para verificar quantos vizinhos tem e quais são...
+   //loop para verificar quantos vizinhos tem e quais são...
      for(i = 0, n_con = 0; i < Number_of_ids; i++){
                 if(My_node->TCP_fd[i] != -1){
                     if(i =! atoi(My_node->id)){
@@ -264,7 +265,7 @@ void cmd_leave(Node_info* My_node){
         return 2 ;
         }
     }
-    
+    */
 
 }
 

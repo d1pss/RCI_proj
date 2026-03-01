@@ -13,7 +13,7 @@ int print_ids(char* response, char* net){
     if(first_id_index != 0){
         if(first_id_index != response_len){
             printf("List of Nodes in network %s:\n", net);
-            for(int i = first_id_index; i < response_len; i+3){
+            for(int i = first_id_index; i < response_len; i += 3){
                 id_to_print[0] = response[i];
                 id_to_print[0] = response[i+1];
                 printf("%s\n", id_to_print);
@@ -34,7 +34,7 @@ int print_ids(char* response, char* net){
 
 //return 7 means the net is full
 int add_id_to_net(char* net, char* id, Node_info* My_node){
-    char message[Max_message_len], response[Max_response_size], op;
+    char message[UDP_message_len], response[UDP_response_size], op;
     int return_code;
 
     //get_new_ip_and_Port(&new_IP, &new_Port);
@@ -78,9 +78,8 @@ int add_id_to_net(char* net, char* id, Node_info* My_node){
     }
 }
 
-int get_id_info(char** id_IP ,char** id_Port ,bool* get_id_info ,char* net, char* id, Node_info* My_node){
-    char message[Max_message_len];
-    char response[Max_response_size], op;
+int get_id_info(char* id_IP ,char* id_Port ,bool* get_id_info ,char* net, char* id, Node_info* My_node){
+    char message[UDP_message_len], response[UDP_response_size], op;
     int return_code, items_found;
 
     sprintf(message, "CONTACT 100 0 %s %s\n", net, id);
@@ -127,63 +126,63 @@ int get_id_info(char** id_IP ,char** id_Port ,bool* get_id_info ,char* net, char
 }
 
 
-int max(int a, int b)
-{
+int max(int a, int b){
     return a > b ? a : b;
 }
 
 void print_help(void){
-    printf("join (j) net id .   .   .   .   .   . | register node as (id) in the (net)\n\\
-            show nodes (n) net  .   .   .   .   . | print nodes registred in (net)\n\\
-            leave (l)   .   .   .   .   .   .   . | unregister node\n\\
-            exit (x)    .   .   .   .   .   .   . | exit the program\n\\
-            add edge (ae) id    .   .   .   .   . | create a TCP chanel between node and destiny (id)\n\\
-            remove edge (re) id .   .   .   .   . | closes the TCP chanel between node and destiny (id)\n\\
-            show neighbors (sg) .   .   .   .   . | print the ids directly connected to the node\n\\
-            announce (a)    .   .   .   .   .   . | announce the node to the other nodes in the network\n\\
-            show routing (sr) dest  .   .   .   . | ---falta escrever---\n\\
-            start monitor (sm)  .   .   .   .   . | ---falta escrever---\n\\
-            end monitor (em)    .   .   .   .   . | ---falta escrever---\n\\
-            message (m) dest message    .   .   . | send (message) to node (dest)\n\\
-            direct join (dj) net id .   .   .   . | ---falta escrever---\n\\
-            direct add edge (dae) id idIP idTCP . | ---falta escrever---\n");
-    return;
+    printf("join (j) net id . . . . . . | register node as (id) in the (net)\n"
+           "show nodes (n) net . . . . . | print nodes registred in (net)\n"
+           "leave (l) . . . . . . . . | unregister node\n"
+           "exit (x) . . . . . . . . | exit the program\n"
+           "add edge (ae) id . . . . . | create a TCP chanel between node and destiny (id)\n"
+           "remove edge (re) id . . . . | closes the TCP chanel between node and destiny (id)\n"
+           "show neighbors (sg) . . . . | print the ids directly connected to the node\n"
+           "announce (a) . . . . . . . | announce the node to the other nodes in the network\n"
+           "show routing (sr) dest . . . | ---falta escrever---\n"
+           "start monitor (sm) . . . . . | ---falta escrever---\n"
+           "end monitor (em) . . . . . | ---falta escrever---\n"
+           "message (m) dest message . . | send (message) to node (dest)\n"
+           "direct join (dj) net id . . . | ---falta escrever---\n"
+           "direct add edge (dae) id idIP idTCP . | ---falta escrever---\n");
 }
 
-void Check_argv_format(char** argv, int argc){
+int Check_argv_format(char** argv, int argc){
     if(argc == 5){
         if(is_IP_invalid(argv[1])){
             printf("IP used in ./OWR --> IP <-- TCP regIP regUDP does not folow the standard IPv4 structure\n");
-            return 0;
+            return 1;
         }
         if(is_Port_invalid(argv[2])){
             printf("TCP Port used in ./OWR IP --> TCP <-- regIP regUDP does not folow the standard Port structure\n");
-            return 0;
+            return 1;
         }
         if(is_IP_invalid(argv[3])){
             printf("regIP used in ./OWR IP TCP --> regIP <-- regUDP does not folow the standard IPv4 structure\n");
-            return 0;
+            return 1;
         }
         if(is_Port_invalid(argv[4])){
             printf("UDP Port used in ./OWR IP TCP regIP --> regUDP <-- does not folow the standard Port structure\n");
-            return 0;
+            return 1;
         }
     }else if(argc == 3){
         if(is_IP_invalid(argv[1])){
             printf("IP used in ./OWR --> IP <-- TCP does not folow the standard IPv4 structure\n");
-            return 0;
+            return 1;
         }
         if(is_Port_invalid(argv[2])){
             printf("TCP Port used in ./OWR IP --> TCP <-- does not folow the standard Port structure\n");
-            return 0;
+            return 1;
         }
     }else{
         printf("Comand format is incorrect.\nUsage: ./OWR IP TCP regIP regUDP\n");
-        return 0;
+        return 1;
     }
+
+    return 0;
 }
 
-bool is_IP_invalid(char* IP) {
+bool is_IP_invalid(char* IP){
     int a, b, c, d;
     int last_index = 0;
 
@@ -207,7 +206,7 @@ bool is_IP_invalid(char* IP) {
     return false;
 }
 
-bool is_Port_invalid(char* Port) {
+bool is_Port_invalid(char* Port){
     char* endptr;
     // Convert string to long, endptr stores the end conversion point
     long p = strtol(Port, &endptr, 10);
@@ -258,10 +257,12 @@ Node_info* init_Node(char** argv, int argc){
 bool is_string_a_number(char* string){
     char* endptr;
     // Convert string to long, endptr stores the end conversion point
-    long p = strtol(string, &endptr, 10);
+    (void)strtol(string, &endptr, 10);
 
     // if *endptr is not \0, there was thrash in the sring
     if (string == endptr || *endptr != '\0') return false;
+
+
 
     return true;
 }

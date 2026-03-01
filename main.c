@@ -1,4 +1,4 @@
-#define _POSIX_C_SOURCE 200112L
+
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,10 +15,13 @@
 #include "cmd.h"
 #include "cmd_aux.h"
 #include "server_client_comunication.h"
+#include "routing.h"
 
 int main(int argc, char *argv[]){
     
-    Check_argv_format(argv, argc);
+    if(Check_argv_format(argv, argc) == 1){
+        return 0;
+    }
     
     Node_info* My_node = init_Node(argv, argc);
     if(My_node == NULL) return 1;
@@ -44,7 +47,7 @@ int main(int argc, char *argv[]){
         
             for(i = 0, n_con = 0; i < Number_of_ids; i++){
                 if(My_node->TCP_fd[i] != -1){
-                    if(i =! atoi(My_node->id)){
+                    if((i =! atoi(My_node->id))){
                         n_con++;
                         FD_SET(My_node->TCP_fd[i],&fdset);
                         nfds = max(nfds, My_node->TCP_fd[i]);
@@ -78,7 +81,7 @@ int main(int argc, char *argv[]){
 
                 for(i = 0, n_con = 0; i < Number_of_ids; i++){
                     if(My_node->TCP_fd[i] != -1){
-                        if(i =! atoi(My_node->id)){
+                        if((i =! atoi(My_node->id))){
                             n_con++;
                             if(FD_ISSET(My_node->TCP_fd[i],&fdset)){
                                 //the id (i) is sending us a message

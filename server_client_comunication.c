@@ -21,7 +21,7 @@ int Create_TCP_Server(Node_info* My_node){
     n=bind(My_node->TCP_fd[atoi(My_node->id)],res->ai_addr,res->ai_addrlen);
     if(n==-1) /*error*/ return 5;
 
-    if(listen(My_node->TCP_fd[atoi(My_node->id)],5)==-1)/*error*/return 5;
+    if(listen(My_node->TCP_fd[atoi(My_node->id)], Number_of_ids)==-1)/*error*/return 5;
 
     freeaddrinfo(res);
 
@@ -45,14 +45,6 @@ int accept_TCP_connection(Node_info* My_node){
     My_node->TCP_fd[atoi(cli_id)] = newfd;
 
     My_node->number_of_TCP_chanels++;
-
-    return 0;
-}
-
-int Close_TCP_Server(Node_info* My_node){
-    close(My_node->TCP_fd[atoi(My_node->id)]);
-
-    My_node->TCP_fd[atoi(My_node->id)] = -1;
 
     return 0;
 }
@@ -94,17 +86,45 @@ int Close_TCP_Client(char* dest_id, Node_info* My_node){
     return 0;
 }
 
+int Close_TCP_Server(Node_info* My_node){
+    close(My_node->TCP_fd[atoi(My_node->id)]);
+
+    My_node->TCP_fd[atoi(My_node->id)] = -1;
+
+    return 0;
+}
+
+int Send_message_to_id(char* message, int dest_id, Node_info* My_node){
+
+    ssize_t n=write(My_node->TCP_fd[dest_id],message, strlen(message));
+    if(n==-1)/*error*/return 5;
+
+    return 0;
+}
+
+int Recive_message_from_id(char* response, int dest_id, Node_info* My_node){
+    ssize_t n=read(My_node->TCP_fd[dest_id], response, Max_response_size);
+    if(n==-1)/*error*/return 5;
+
+    if(n < Max_response_size){
+        response[n] = '\0';
+    }else{
+        //lost info not suposed to happen if it happends we need bigger buffer
+        printf("SE ISTO IMPRIMIO PERCISAMOS DE UM BUFFER MAIOR\n"); //debug retirar no fim
+    }
+
+    return 0;
+
+}
 
 /********************************************************************************* -----UDP----- *********************************************************************************/
 
-//response needs to be freed outside the function (if it has error no need to free response)
-int send_message_to_UDP_server(char* message, char** response, int* response_len, Node_info* My_node){
+int send_message_to_UDP_server(char* message, char* response, Node_info* My_node){
     int fd,errcode;
     ssize_t n;
     socklen_t addrlen;
     struct addrinfo hints,*res;
     struct sockaddr_in addr; 
-    char buffer[Max_buff_size];
 
     fd=socket(AF_INET,SOCK_DGRAM,0); //UDP socket
     if(fd==-1) /*error*/return 5;
@@ -124,23 +144,15 @@ int send_message_to_UDP_server(char* message, char** response, int* response_len
 
 
     addrlen=sizeof(addr);
-    n=recvfrom(fd,buffer,Max_buff_size,0,(struct sockaddr*)&addr,&addrlen);
+    n=recvfrom(fd,response,Max_response_size,0,(struct sockaddr*)&addr,&addrlen);
     if(n==-1) /*error*/ return 5;
 
-    if(n < Max_buff_size){
-        buffer[n] = '\0';
+    if(n < Max_response_size){
+        response[n] = '\0';
     }else{
         //lost info not suposed to happen if it happends we need bigger buffer
         printf("SE ISTO IMPRIMIO PERCISAMOS DE UM BUFFER MAIOR\n"); //debug retirar no fim
     }
-
-    *response = (char*)malloc((n+1)*sizeof(char));
-    if(*response == NULL){
-        printf("ERROR: error alocating memory");
-        return 4;
-    }
-    *response_len = n;
-    strcpy(*response, buffer);
 
     freeaddrinfo(res);
     close(fd);

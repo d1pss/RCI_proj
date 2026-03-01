@@ -201,12 +201,12 @@ int cmd_add_edge(char* dest_id, Node_info* My_node){
 }
 
 int cmd_show_nodes(char* net, Node_info* My_node){
-    char message[Max_message_len], *response, op;
-    int response_len, return_code;
+    char message[Max_message_len], response[Max_response_size], op;
+    int return_code;
 
     sprintf(message, "NODES 100 0 %s\n", net);
 
-    return_code = send_message_to_UDP_server(message, &response, &response_len, My_node);
+    return_code = send_message_to_UDP_server(message, response, My_node);
 
     if(return_code != 0){
         return return_code;
@@ -217,15 +217,13 @@ int cmd_show_nodes(char* net, Node_info* My_node){
     if (items_found == 1) {
         if (op == '1') {
             // message contains the ids in the network
-            return_code = print_ids(response, response_len, net);
+            return_code = print_ids(response, net);
 
-            free(response);
             return return_code;
         }else{
             //error code from network
             printf("ERROR: error code (%c) from network using this comand %s\n", op, message);
 
-            free(response);
             return 2;
         }
     }else{
@@ -235,7 +233,7 @@ int cmd_show_nodes(char* net, Node_info* My_node){
 }
 
 void cmd_leave(Node_info* My_node){
-    char message[Max_message_len], *response, op, neigbours[Number_of_ids][Id_len];
+    char message[Max_message_len], response[Max_response_size], op, neigbours[Number_of_ids][Id_len];
     int n_neighbours, i;
     
     //loop para verificar quantos vizinhos tem e quais são...
@@ -254,17 +252,15 @@ void cmd_leave(Node_info* My_node){
     }
 
     sprintf(message, "REG 100 3 %s %s\n", My_node->net, My_node->id);
-    send_message_to_UDP_server(message, &response, Server);
+    send_message_to_UDP_server(message, response, Server);
     int items_found = sscanf(response, "%*s %*s %c", &op);
     if (items_found == 1) {
         if (op == '4') {
             // id succesfully left
-            free(response);
             Close_TCP_Server(Node_info* My_node);
             return 0;
         }else{
         //error code from network
-        free(response);
         return 2 ;
         }
     }

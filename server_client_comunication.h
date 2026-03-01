@@ -11,6 +11,7 @@ s#include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/select.h>
+#include <string.h>
 
 #include "struct_and_constants.h"
 

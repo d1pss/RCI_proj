@@ -6,7 +6,7 @@
 #define DEFAULT_UDP_PORT "59000" //Default UDP server Port
 #define DEFAULT_UDP_IP "193.136.138.142" //Default UDP server IPv4
 
-#define Max_buff_size 320 //100 id x 3 for the 2 digits and the \n + 20 for the first line in the worse case
+#define Max_response_size 320 //100 id x 3 for the 2 digits and the \n + 20 for the first line in the worse case
 #define Max_message_len 40 //in the worse case using REG we can have 38 chars so 40 is a safe lenght
 #define Max_cmd_len 32 //in the worse case using (dae id idIP idTCP) we can have 30 chars so 32 is a safe lenght
 #define Max_cmd_arguments 3 //in the worse case using (dae id idIP idTCP) we have 3 arguments

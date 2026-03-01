@@ -22,9 +22,9 @@ int Create_TCP_Server(Node_info* My_node);
 
 int accept_TCP_connection(Node_info* My_node);
 
-int Create_and_Connect_TCP_client(char* dest_IP, char* dest_Port, char* dest_id, Node_info* My_node);
+int Create_and_Connect_TCP_client(char* dest_IP, char* dest_Port, int dest_id, Node_info* My_node);
 
-int Close_TCP_Client(char* dest_id, Node_info* My_node);
+int Close_TCP_Client(int dest_id, Node_info* My_node);
 
 int Close_TCP_Server(Node_info* My_node);
 

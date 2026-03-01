@@ -1,6 +1,6 @@
 #include "cmd_aux.h"
 
-int print_ids(char* response, char* net){
+int print_ids(char* response, int net){
 
     int first_id_index = 0, response_len = strlen(response);
     char id_to_print[3] = {'0', '0', '\0'};
@@ -12,7 +12,7 @@ int print_ids(char* response, char* net){
     }
     if(first_id_index != 0){
         if(first_id_index != response_len){
-            printf("List of Nodes in network %s:\n", net);
+            printf("List of Nodes in network %d:\n", net);
             for(int i = first_id_index; i < response_len; i += 3){
                 id_to_print[0] = response[i];
                 id_to_print[0] = response[i+1];
@@ -21,7 +21,7 @@ int print_ids(char* response, char* net){
             return 0;
         }else{
             // there is no nodes in the network
-            printf("There are no Nodes in the network %s to show.\n", net);
+            printf("There are no Nodes in the network %d to show.\n", net);
             return 0;
         }
     }else{
@@ -33,14 +33,14 @@ int print_ids(char* response, char* net){
 }
 
 //return 7 means the net is full
-int add_id_to_net(char* net, char* id, Node_info* My_node){
+int add_id_to_net(int net, int id, Node_info* My_node){
     char message[UDP_message_len], response[UDP_response_size], op;
     int return_code;
 
     //get_new_ip_and_Port(&new_IP, &new_Port);
     //está associado a OWR IP TCP regIP regUDP
     
-    sprintf(message, "REG 100 0 %s %s %s %s\n", net, id, My_node->Node_TCP_IP, My_node->Node_TCP_Port);
+    sprintf(message, "REG 100 0 %d %d %s %s\n", net, id, My_node->Node_TCP_IP, My_node->Node_TCP_Port);
 
     return_code = send_message_to_UDP_server(message, response, My_node);
 
@@ -78,11 +78,11 @@ int add_id_to_net(char* net, char* id, Node_info* My_node){
     }
 }
 
-int get_id_info(char* id_IP ,char* id_Port ,bool* get_id_info ,char* net, char* id, Node_info* My_node){
+int get_id_info(char* id_IP ,char* id_Port ,bool* get_id_info ,int net, int id, Node_info* My_node){
     char message[UDP_message_len], response[UDP_response_size], op;
     int return_code, items_found;
 
-    sprintf(message, "CONTACT 100 0 %s %s\n", net, id);
+    sprintf(message, "CONTACT 100 0 %d %d\n", net, id);
    
 
     return_code = send_message_to_UDP_server(message, response, My_node);
@@ -131,19 +131,19 @@ int max(int a, int b){
 }
 
 void print_help(void){
-    printf("join (j) net id . . . . . . | register node as (id) in the (net)\n"
-           "show nodes (n) net . . . . . | print nodes registred in (net)\n"
-           "leave (l) . . . . . . . . | unregister node\n"
-           "exit (x) . . . . . . . . | exit the program\n"
-           "add edge (ae) id . . . . . | create a TCP chanel between node and destiny (id)\n"
-           "remove edge (re) id . . . . | closes the TCP chanel between node and destiny (id)\n"
-           "show neighbors (sg) . . . . | print the ids directly connected to the node\n"
-           "announce (a) . . . . . . . | announce the node to the other nodes in the network\n"
-           "show routing (sr) dest . . . | ---falta escrever---\n"
-           "start monitor (sm) . . . . . | ---falta escrever---\n"
-           "end monitor (em) . . . . . | ---falta escrever---\n"
-           "message (m) dest message . . | send (message) to node (dest)\n"
-           "direct join (dj) net id . . . | ---falta escrever---\n"
+    printf("join (j) net id . . . . . . . . . . . | register node as (id) in the (net)\n"
+           "show nodes (n) net. . . . . . . . . . | print nodes registred in (net)\n"
+           "leave (l) . . . . . . . . . . . . . . | unregister node\n"
+           "exit (x). . . . . . . . . . . . . . . | exit the program\n"
+           "add edge (ae) id. . . . . . . . . . . | create a TCP chanel between node and destiny (id)\n"
+           "remove edge (re) id . . . . . . . . . | closes the TCP chanel between node and destiny (id)\n"
+           "show neighbors (sg) . . . . . . . . . | print the ids directly connected to the node\n"
+           "announce (a). . . . . . . . . . . . . | announce the node to the other nodes in the network\n"
+           "show routing (sr) dest. . . . . . . . | ---falta escrever---\n"
+           "start monitor (sm). . . . . . . . . . | ---falta escrever---\n"
+           "end monitor (em). . . . . . . . . . . | ---falta escrever---\n"
+           "message (m) dest message. . . . . . . | send (message) to node (dest)\n"
+           "direct join (dj) net id . . . . . . . | ---falta escrever---\n"
            "direct add edge (dae) id idIP idTCP . | ---falta escrever---\n");
 }
 
@@ -240,7 +240,7 @@ Node_info* init_Node(char** argv, int argc){
     }
 
     for(int i = 0; i < Number_of_ids; i++){
-        My_node->dist[i] = -1;
+        My_node->dist[i] = INF;
         My_node->succ[i] = -1;
         My_node->state[i] = 0;
         My_node->TCP_fd[i] = -1;

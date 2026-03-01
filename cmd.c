@@ -116,21 +116,23 @@ int process_command(char *input, Node_info* My_node){
     return 0;
 }
 
-int cmd_join(char* net, char* id, Node_info* My_node){
+int cmd_join(char* net_as_char, char* id_as_char, Node_info* My_node){
     int return_code;
     bool does_id_exist;
 
-    if(!is_string_a_number(net) || atoi(net) > 999 || atoi(net) < 0){
+    if(!is_string_a_number(net_as_char) || atoi(net_as_char) > 999 || atoi(net_as_char) < 0){
         //error net value should be between 999 and 000
         printf("ERROR: input argument net should be a number between 000 and 999\n");
         return 3;
     }
 
-    if(!is_string_a_number(id) || atoi(id) > 99 || atoi(id) < 0){
+    if(!is_string_a_number(id_as_char) || atoi(id_as_char) > 99 || atoi(id_as_char) < 0){
         //error id value should be between 99 and 00
         printf("ERROR: input argument id should be a number between 00 and 99\n");
         return 3;
     }
+
+    int id = atoi(id_as_char), net = atoi(net_as_char);
 
     if(My_node->is_in_net){
         //no need to join node is already in th network
@@ -146,7 +148,7 @@ int cmd_join(char* net, char* id, Node_info* My_node){
 
     if(does_id_exist){
         //error id already exists must use a difrent one
-        printf("The id chosen (%s) is in use. Must use a difrent id to add the node to the network %s\n", id, net);
+        printf("The id chosen (%d) is in use. Must use a difrent id to add the node to the network %d\n", id, net);
         return 0;
     }
 
@@ -159,8 +161,8 @@ int cmd_join(char* net, char* id, Node_info* My_node){
         return return_code;
     }
 
-    strcpy(My_node->net, net);
-    strcpy(My_node->id, id);
+    My_node->net = net;
+    My_node->id = id;
     My_node->is_in_net = true;
 
     return_code = Create_TCP_Server(My_node);
@@ -169,10 +171,18 @@ int cmd_join(char* net, char* id, Node_info* My_node){
 
 }
 
-int cmd_add_edge(char* dest_id, Node_info* My_node){
+int cmd_add_edge(char* dest_id_as_char, Node_info* My_node){
     int return_code;
     char dest_ip[IP_len], dest_Port[Port_len];
     bool is_dest_id_in_net;
+
+    if(!is_string_a_number(dest_id_as_char) || atoi(dest_id_as_char) > 99 || atoi(dest_id_as_char) < 0){
+        //error id value should be between 99 and 00
+        printf("ERROR: input argument id should be a number between 00 and 99\n");
+        return 3;
+    }
+
+    int dest_id = atoi(dest_id_as_char);
 
     if(!My_node->is_in_net){
         printf("Origin node is not in the network use the join comand first\n");
@@ -201,11 +211,19 @@ int cmd_add_edge(char* dest_id, Node_info* My_node){
     return 0;
 }
 
-int cmd_show_nodes(char* net, Node_info* My_node){
+int cmd_show_nodes(char* net_as_char, Node_info* My_node){
     char message[UDP_message_len], response[UDP_response_size], op;
     int return_code;
 
-    sprintf(message, "NODES 100 0 %s\n", net);
+    if(!is_string_a_number(net_as_char) || atoi(net_as_char) > 999 || atoi(net_as_char) < 0){
+        //error net value should be between 999 and 000
+        printf("ERROR: input argument net should be a number between 000 and 999\n");
+        return 3;
+    }
+
+    int net = atoi(net_as_char);
+
+    sprintf(message, "NODES 100 0 %d\n", net);
 
     return_code = send_message_to_UDP_server(message, response, My_node);
 
@@ -269,12 +287,23 @@ void cmd_leave(Node_info* My_node){
 
 }
 
-void cmd_remove_edge(char* id_to_remove, Node_info* My_node){
+void cmd_remove_edge(char* id_to_remove_as_char, Node_info* My_node){
     int return_code;
+
+    if(!is_string_a_number(id_to_remove_as_char) || atoi(id_to_remove_as_char) > 99 || atoi(id_to_remove_as_char) < 0){
+        //error id value should be between 99 and 00
+        printf("ERROR: input argument id should be a number between 00 and 99\n");
+        return 3;
+    }
+
+    int id_to_remove = atoi(id_to_remove_as_char);
+
+
     if(!My_node->is_in_net){
         //mensagem de erro que o node n existe na net
     }
-    if(My_node->TCP_fd[atoi(id_to_remove)] == -1){
+
+    if(My_node->TCP_fd[id_to_remove] == -1){
         //mensagem de erro que o node n é vizinho
     }
 

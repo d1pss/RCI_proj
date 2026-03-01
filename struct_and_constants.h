@@ -17,6 +17,9 @@
 #define Number_of_ids 100 // we have ids between 00 and 99, so 100 in total
 #define Id_len 3 // ids are two digit numbers so xx\0 that is 3 chars
 #define Net_len 4 // nets are three digit numbers so xxx\0 that is 4 chars
+#define INF 100 // 99 is the max dist possible so 100 can act as infinity
+
+
 
 typedef struct _Node_information{
     //TCP info for node to node connection
@@ -30,8 +33,8 @@ typedef struct _Node_information{
     char UDP_Server_Port[Port_len];
 
     //Node info
-    char id[Id_len];
-    char net[Net_len];
+    int id;
+    int net;
     int dist[Number_of_ids];
     int succ[Number_of_ids];
     bool state[Number_of_ids];

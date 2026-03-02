@@ -21,12 +21,7 @@ int Send_routing_protocol_to_id(char* routing_protocol, int dest_id, Node_info* 
 
 int Send_chat_protocol_to_id(char* chat_protocol, int dest_id, Node_info* My_node);
 
-int Recive_message_from_id(char* message, ssize_t Max_len, int dest_id, Node_info* My_node);
-
-int Recive_routing_protocol_from_id(char* routing_protocol, int dest_id, Node_info* My_node);
-
-int Recive_chat_protocol_from_id(char* chat_protocol, int dest_id, Node_info* My_node);
-
+int Recive_message_from_id(char* message, ssize_t Max_len, int sender_id, Node_info* My_node);
 
 /********************************************************************************* -----UDP----- *********************************************************************************/
 

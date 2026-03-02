@@ -113,8 +113,8 @@ int Send_chat_protocol_to_id(char* chat_protocol, int dest_id, Node_info* My_nod
     return Send_routing_protocol_to_id(chat_protocol, dest_id, My_node);
 }
 
-int Recive_message_from_id(char* message, ssize_t Max_len, int dest_id, Node_info* My_node){
-    ssize_t n=read(My_node->TCP_fd[dest_id], message, Max_len);
+int Recive_message_from_id(char* message, ssize_t Max_len, int sender_id, Node_info* My_node){
+    ssize_t n=read(My_node->TCP_fd[sender_id], message, Max_len);
     if(n==-1)/*error*/return 5;
 
     if(n < Max_len){
@@ -128,13 +128,6 @@ int Recive_message_from_id(char* message, ssize_t Max_len, int dest_id, Node_inf
 
 }
 
-int Recive_routing_protocol_from_id(char* routing_protocol, int dest_id, Node_info* My_node){
-    return Recive_message_from_id(routing_protocol, TCP_Routing_protocol_len, dest_id, My_node);
-}
-
-int Recive_chat_protocol_from_id(char* chat_protocol, int dest_id, Node_info* My_node){
-    return Recive_message_from_id(chat_protocol, TCP_Chat_protocol_len, dest_id, My_node);
-}
 
 
 
@@ -160,9 +153,33 @@ int send_message_to_UDP_server(char* message, char* response, Node_info* My_node
     n=sendto(fd,message,strlen(message),0,res->ai_addr,res->ai_addrlen);
     if(n==-1) /*error*/ return 5;
 
+    //check if we recive message in time
+    
+    fd_set fdset;
+    struct timeval tv;
 
-    //do select here
+    FD_ZERO(&fdset);
+    FD_SET(fd, &fdset);
 
+    //Define timeout
+    tv.tv_sec = 5; 
+    tv.tv_usec = 0;
+
+    int sret = select(fd + 1, &fdset, NULL, NULL, &tv);
+
+    if (sret == 0) {
+        // TIMEOUT
+        printf("Erro: Timeout do servidor UDP\n");
+        freeaddrinfo(res);
+        close(fd);
+        return 0; 
+    } else if (sret == -1) {
+        // ERRO in select
+        printf("ERROR: select error\n");
+        freeaddrinfo(res);
+        close(fd);
+        return 5;
+    }
 
     addrlen=sizeof(addr);
     n=recvfrom(fd,response,UDP_response_size,0,(struct sockaddr*)&addr,&addrlen);

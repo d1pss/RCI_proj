@@ -22,7 +22,7 @@
 
 #define UDP_response_size 320 //100 id x 3 for the 2 digits and the \n + 20 for the first line in the worse case
 #define UDP_message_len 40 //in the worse case using REG we can have 38 chars so 40 is a safe lenght
-#define TCP_Routing_protocol_len 12 //in the worse case using (NEIGHBOR id\n) we hase 12 chars
+#define TCP_Routing_protocol_len 9 //in the worse case using (NEIGHBOR\0) we have 9 chars
 #define TCP_Chat_protocol_len 140  // in the worse case using (CHAT origin dest chat\n) we can have 139 chars
 #define cmd_len 32 //in the worse case using (dae id idIP idTCP) we can have 30 chars so 32 is a safe lenght
 #define cmd_arguments 3 //in the worse case using (dae id idIP idTCP) we have 3 arguments

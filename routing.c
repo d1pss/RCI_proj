@@ -1,5 +1,16 @@
 #include "routing.h"
 
+int Send_NEIGHBOR(int neighbor_id_to_send, Node_info* My_node){
+    char Routing_protocol[TCP_Routing_protocol_len];
+    int return_code;
+
+    sprintf(Routing_protocol, "NEIGHBOR %d\n", My_node->id);
+
+    return_code = Send_routing_protocol_to_id(Routing_protocol, neighbor_id_to_send, My_node);
+
+    return return_code;
+}
+
 int Send_COORD(int neighbor_id_to_send, int dest_id, Node_info* My_node){
     char Routing_cmd[TCP_Routing_protocol_len];
     int return_code;
@@ -101,7 +112,7 @@ int process_TCP_message(char* input, int neigbor_id, Node_info* My_node){
 
         }else if(!strcmp(Protocol, "UNCOORD")){
 
-             if(sscanf(input, "%*s %d", &dest_id) == 1){
+            if(sscanf(input, "%*s %d", &dest_id) == 1){
 
                 return process_UNCOORD_message(dest_id, neigbor_id, My_node);
 
@@ -113,7 +124,7 @@ int process_TCP_message(char* input, int neigbor_id, Node_info* My_node){
 
         }else if(!strcmp(Protocol, "CHAT")){
 
-             if(sscanf(input, "%*s %*d %d", &dest_id) == 1){
+            if(sscanf(input, "%*s %*d %d", &dest_id) == 1){
 
                 return process_CHAT_message(input, dest_id, My_node);
 
@@ -249,4 +260,19 @@ int process_CHAT_message(char* Chat_protocol, int dest_id, Node_info* My_node){
     if(return_code != 0) return return_code;
 
     return 0;
+}
+
+int process_NEIGHBOR_message(int neigbor_id, Node_info* My_node){
+    char Routing_protocol[TCP_Routing_protocol_len];
+    int cli_id, return_code;
+
+    for(int i = 0; i < Number_of_ids; i++){
+        if(My_node->succ[i] != -1){
+            return_code = Send_ROUTE(neigbor_id, i, My_node);
+            if(return_code != 0) return return_code;
+        }
+    }
+
+    return 0;
+
 }

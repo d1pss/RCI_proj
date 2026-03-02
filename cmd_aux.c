@@ -33,14 +33,11 @@ int print_ids(char* response, int net){
 }
 
 //return 7 means the net is full
-int add_id_to_net(int net, int id, Node_info* My_node){
+int add_id_to_net(char* net, char* id, Node_info* My_node){
     char message[UDP_message_len], response[UDP_response_size], op;
     int return_code;
-
-    //get_new_ip_and_Port(&new_IP, &new_Port);
-    //está associado a OWR IP TCP regIP regUDP
     
-    sprintf(message, "REG 100 0 %d %d %s %s\n", net, id, My_node->Node_TCP_IP, My_node->Node_TCP_Port);
+    sprintf(message, "REG 100 0 %s %s %s %s\n",net, id, My_node->Node_TCP_IP, My_node->Node_TCP_Port);
 
     return_code = send_message_to_UDP_server(message, response, My_node);
 
@@ -78,11 +75,11 @@ int add_id_to_net(int net, int id, Node_info* My_node){
     }
 }
 
-int get_id_info(char* id_IP ,char* id_Port ,bool* get_id_info ,int net, int id, Node_info* My_node){
+int get_id_info(char* id_IP ,char* id_Port ,bool* get_id_info ,char* net ,char* id , Node_info* My_node){
     char message[UDP_message_len], response[UDP_response_size], op;
     int return_code, items_found;
 
-    sprintf(message, "CONTACT 100 0 %d %d\n", net, id);
+    sprintf(message, "CONTACT 100 0 %s %s\n", net, id);
    
 
     return_code = send_message_to_UDP_server(message, response, My_node);
@@ -267,4 +264,16 @@ bool is_string_a_number(char* string){
 
 
     return true;
+}
+
+char* int_id_to_string(int id){
+    char id_as_char[Id_len];
+    sprintf(id_as_char, "%02d", id);
+    return id_as_char;
+}
+
+char* int_net_to_string(int net){
+    char net_as_char[Net_len];
+    sprintf(net_as_char, "%03d", net);
+    return net_as_char;
 }

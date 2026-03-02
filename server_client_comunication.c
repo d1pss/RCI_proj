@@ -32,12 +32,38 @@ int accept_TCP_connection(Node_info* My_node){
     ssize_t n;
     socklen_t addrlen;
     struct sockaddr_in addr;
-    int newfd, cli_id = 0;
+    int newfd, cli_id = 0, return_code;
     char Routing_protocol[TCP_Routing_protocol_len];
 
     addrlen=sizeof(addr);
     if((newfd=accept(My_node->TCP_fd[My_node->id],(struct sockaddr*)&addr,&addrlen))==-1)
     /*error*/ return 5;
+
+    //in case there is an error sending the message timeout
+
+    fd_set fdset;
+    struct timeval tv;
+
+    FD_ZERO(&fdset);
+    FD_SET(newfd, &fdset);
+
+    //Define timeout
+    tv.tv_sec = 5; 
+    tv.tv_usec = 0;
+
+    int sret = select(newfd + 1, &fdset, NULL, NULL, &tv);
+
+    if (sret == 0) {
+        // TIMEOUT
+        printf("Erro: Timeout do servidor TCP\n");
+        close(newfd);
+        return 0; 
+    } else if (sret == -1) {
+        // ERRO in select
+        printf("ERROR: select error\n"); 
+        close(newfd);
+        return 5;
+    }
 
     n=read(newfd, Routing_protocol, TCP_Routing_protocol_len);
     if(n==-1)/*error*/return 5;
@@ -50,11 +76,14 @@ int accept_TCP_connection(Node_info* My_node){
 
     My_node->number_of_TCP_channels++;
 
+    return_code = process_NEIGHBOR_message(cli_id, My_node);
+    if(return_code != 0) return return_code;
+
     return 0;
 }
 
 int Create_and_Connect_TCP_client(char* dest_IP, char* dest_Port, int dest_id, Node_info* My_node){
-    int errcode;
+    int errcode, return_code;
     ssize_t n;
     struct addrinfo hints,*res;
     char Routing_protocol[TCP_Routing_protocol_len];
@@ -72,14 +101,18 @@ int Create_and_Connect_TCP_client(char* dest_IP, char* dest_Port, int dest_id, N
     n=connect(My_node->TCP_fd[dest_id],res->ai_addr,res->ai_addrlen);
     if(n==-1)/*error*/return 5;
 
-    sprintf(Routing_protocol, "NEIGHBOR %d\n", My_node->id);
+    freeaddrinfo(res);
 
-    n=write(My_node->TCP_fd[dest_id],Routing_protocol, strlen(Routing_protocol));
-    if(n==-1)/*error*/return 5;
+    return_code = Send_NEIGHBOR(dest_id, My_node);
+    if(return_code != 0){
+        close(My_node->TCP_fd[dest_id]);
+        return return_code;
+    } 
 
     My_node->number_of_TCP_channels++;
 
-    freeaddrinfo(res);
+    return_code = Send_ROUTE(dest_id, My_node->id, My_node);
+    if(return_code != 0) return return_code;
 
     return 0;
 }

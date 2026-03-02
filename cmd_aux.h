@@ -24,5 +24,9 @@ Node_info* init_Node(char** argv, int argc);
 
 bool is_string_a_number(char* string);
 
+char* int_id_to_string(int id);
+
+char* int_net_to_string(int net);
+
 
 #endif

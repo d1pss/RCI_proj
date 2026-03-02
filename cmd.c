@@ -140,7 +140,7 @@ int cmd_join(char* net_as_char, char* id_as_char, Node_info* My_node){
         return 0;
     }
 
-    return_code = get_id_info(NULL, NULL, &does_id_exist ,net, id, My_node);
+    return_code = get_id_info(NULL, NULL, &does_id_exist ,net_as_char, id_as_char, My_node);
 
     if(return_code != 0){
         return return_code;
@@ -152,7 +152,7 @@ int cmd_join(char* net_as_char, char* id_as_char, Node_info* My_node){
         return 0;
     }
 
-    return_code = add_id_to_net(net, id, My_node);
+    return_code = add_id_to_net(net_as_char, id_as_char, My_node);
 
     if(return_code != 0){
         if(return_code == 7){
@@ -189,7 +189,7 @@ int cmd_add_edge(char* dest_id_as_char, Node_info* My_node){
         return 0;
     }
 
-    return_code = get_id_info(dest_ip, dest_Port, &is_dest_id_in_net, My_node->net, dest_id, My_node);
+    return_code = get_id_info(dest_ip, dest_Port, &is_dest_id_in_net, int_net_to_string(My_node->net), dest_id_as_char, My_node);
 
     if(return_code != 0){
         return return_code;
@@ -205,6 +205,8 @@ int cmd_add_edge(char* dest_id_as_char, Node_info* My_node){
     if(return_code != 0){
         return return_code;
     }
+
+    
 
 
 
@@ -223,7 +225,7 @@ int cmd_show_nodes(char* net_as_char, Node_info* My_node){
 
     int net = atoi(net_as_char);
 
-    sprintf(message, "NODES 100 0 %d\n", net);
+    sprintf(message, "NODES 100 0 %s\n", net_as_char);
 
     return_code = send_message_to_UDP_server(message, response, My_node);
 
@@ -306,6 +308,8 @@ int cmd_remove_edge(char* id_to_remove_as_char, Node_info* My_node){
     if(My_node->TCP_fd[id_to_remove] == -1){
         //mensagem de erro que o node n é vizinho
     }
+
+
 
     return 0;
 }

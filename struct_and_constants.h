@@ -1,7 +1,21 @@
 #ifndef STRUCT_AND_CONSTANTS_H
 #define STRUCT_AND_CONSTANTS_H
 
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200809L
+#endif
+
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
 #include <stdbool.h>
+#include <string.h>
+#include <sys/select.h>
 
 #define DEFAULT_UDP_PORT "59000" //Default UDP server Port
 #define DEFAULT_UDP_IP "193.136.138.142" //Default UDP server IPv4
@@ -26,7 +40,7 @@ typedef struct _Node_information{
     char Node_TCP_IP[IP_len];
     char Node_TCP_Port[Port_len];
     int TCP_fd[Number_of_ids];
-    int number_of_TCP_chanels;
+    int number_of_TCP_channels;
 
     //UDP info for node to network connection
     char UDP_Server_IP[IP_len];
@@ -38,6 +52,8 @@ typedef struct _Node_information{
     int dist[Number_of_ids];
     int succ[Number_of_ids];
     bool state[Number_of_ids];
+    int succ_coord[Number_of_ids];
+    int pending_uncoord[Number_of_ids];
 
     //flags
     bool is_in_net;

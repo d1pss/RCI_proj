@@ -32,7 +32,7 @@ int accept_TCP_connection(Node_info* My_node){
     ssize_t n;
     socklen_t addrlen;
     struct sockaddr_in addr;
-    int newfd, cli_id;
+    int newfd, cli_id = 0;
     char Routing_protocol[TCP_Routing_protocol_len];
 
     addrlen=sizeof(addr);
@@ -42,13 +42,13 @@ int accept_TCP_connection(Node_info* My_node){
     n=read(newfd, Routing_protocol, TCP_Routing_protocol_len);
     if(n==-1)/*error*/return 5;
 
-    if(sscanf(Routing_protocol, "%*s %d", cli_id) != 1){
+    if(sscanf(Routing_protocol, "%*s %d", &cli_id) != 1){
         return 6;
     }
 
     My_node->TCP_fd[cli_id] = newfd;
 
-    My_node->number_of_TCP_chanels++;
+    My_node->number_of_TCP_channels++;
 
     return 0;
 }
@@ -72,12 +72,12 @@ int Create_and_Connect_TCP_client(char* dest_IP, char* dest_Port, int dest_id, N
     n=connect(My_node->TCP_fd[dest_id],res->ai_addr,res->ai_addrlen);
     if(n==-1)/*error*/return 5;
 
-    sprintf(Routing_protocol, "NEIGHBOR %s\n", My_node->id);
+    sprintf(Routing_protocol, "NEIGHBOR %d\n", My_node->id);
 
     n=write(My_node->TCP_fd[dest_id],Routing_protocol, strlen(Routing_protocol));
     if(n==-1)/*error*/return 5;
 
-    My_node->number_of_TCP_chanels++;
+    My_node->number_of_TCP_channels++;
 
     freeaddrinfo(res);
 
@@ -88,7 +88,7 @@ int Close_TCP_Client(int dest_id, Node_info* My_node){
     close(My_node->TCP_fd[dest_id]);
 
     My_node->TCP_fd[dest_id] = -1;
-    My_node->number_of_TCP_chanels--;
+    My_node->number_of_TCP_channels--;
 
     return 0;
 }

@@ -287,8 +287,8 @@ void cmd_leave(Node_info* My_node){
 
 }
 
-void cmd_remove_edge(char* id_to_remove_as_char, Node_info* My_node){
-    int return_code;
+int cmd_remove_edge(char* id_to_remove_as_char, Node_info* My_node){
+    //int return_code;
 
     if(!is_string_a_number(id_to_remove_as_char) || atoi(id_to_remove_as_char) > 99 || atoi(id_to_remove_as_char) < 0){
         //error id value should be between 99 and 00
@@ -307,6 +307,6 @@ void cmd_remove_edge(char* id_to_remove_as_char, Node_info* My_node){
         //mensagem de erro que o node n é vizinho
     }
 
-
+    return 0;
 }
 

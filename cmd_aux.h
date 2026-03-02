@@ -1,18 +1,14 @@
 #ifndef CMD_AUX_H
 #define CMD_AUX_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include "struct_and_constants.h"
 #include "server_client_comunication.h"
 
-int print_ids(char* response, char* net);
+int print_ids(char* response, int net);
 
-int add_id_to_net(char* net, char* id, Node_info* My_node);
+int add_id_to_net(int net, int id, Node_info* My_node);
 
-int get_id_info(char* id_IP ,char* id_Port ,bool* get_id_info ,char* net, char* id, Node_info* My_node);
+int get_id_info(char* id_IP ,char* id_Port ,bool* get_id_info ,int net, int id, Node_info* My_node);
 
 int max(int a, int b);
 

@@ -243,10 +243,12 @@ Node_info* init_Node(char** argv, int argc){
         My_node->dist[i] = INF;
         My_node->succ[i] = -1;
         My_node->state[i] = 0;
+        My_node->succ_coord[i] = -1;
         My_node->TCP_fd[i] = -1;
+        My_node->pending_uncoord[i] = 0;
     }
 
-    My_node->number_of_TCP_chanels = 0;
+    My_node->number_of_TCP_channels = 0;
 
     My_node->is_in_net = false;
     My_node->is_monitoring = false;

@@ -4,7 +4,7 @@ int Send_NEIGHBOR(int neighbor_id_to_send, Node_info* My_node){
     char Routing_protocol[TCP_Routing_protocol_len];
     int return_code;
 
-    sprintf(Routing_protocol, "NEIGHBOR %d\n", My_node->id);
+    sprintf(Routing_protocol, "NEIGHBOR %02d\n", My_node->id);
 
     return_code = Send_routing_protocol_to_id(Routing_protocol, neighbor_id_to_send, My_node);
 
@@ -15,7 +15,7 @@ int Send_COORD(int neighbor_id_to_send, int dest_id, Node_info* My_node){
     char Routing_cmd[TCP_Routing_protocol_len];
     int return_code;
 
-    sprintf(Routing_cmd, "COORD %d\n", dest_id);
+    sprintf(Routing_cmd, "COORD %02d\n", dest_id);
 
     return_code = Send_routing_protocol_to_id(Routing_cmd, neighbor_id_to_send, My_node);
 
@@ -26,7 +26,7 @@ int Send_UNCOORD(int neighbor_id_to_send, int dest_id, Node_info* My_node){
     char Routing_cmd[TCP_Routing_protocol_len];
     int return_code;
 
-    sprintf(Routing_cmd, "UNCOORD %d\n", dest_id);
+    sprintf(Routing_cmd, "UNCOORD %02d\n", dest_id);
 
     return_code = Send_routing_protocol_to_id(Routing_cmd, neighbor_id_to_send, My_node);
 
@@ -37,9 +37,20 @@ int Send_ROUTE(int neighbor_id_to_send, int dest_id, Node_info* My_node){
     char Routing_cmd[TCP_Routing_protocol_len];
     int return_code;
 
-    sprintf(Routing_cmd, "ROUTE %d %d\n", dest_id, My_node->dist[dest_id]);
+    sprintf(Routing_cmd, "ROUTE %02d %d\n", dest_id, My_node->dist[dest_id]);
 
     return_code = Send_routing_protocol_to_id(Routing_cmd, neighbor_id_to_send, My_node);
+
+    return return_code;
+}
+
+int Send_CHAT(int succ_id, int dest_id, char* chat_message, Node_info* My_node){
+    char Chat_protocol[TCP_Chat_protocol_len];
+    int return_code;
+
+    sprintf(Chat_protocol, "CHAT %02d %02d %[^\n]\n", My_node->id, dest_id, chat_message);
+
+    return_code = Send_chat_protocol_to_id(Chat_protocol, succ_id, My_node);
 
     return return_code;
 }

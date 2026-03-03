@@ -41,6 +41,8 @@ typedef struct _Node_information{
     char Node_TCP_Port[Port_len];
     int TCP_fd[Number_of_ids];
     int number_of_TCP_channels;
+    int TCP_pending_fd[Number_of_ids];
+    int number_pending_fd;
 
     //UDP info for node to network connection
     char UDP_Server_IP[IP_len];

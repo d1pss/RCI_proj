@@ -39,45 +39,8 @@ int accept_TCP_connection(Node_info* My_node){
     if((newfd=accept(My_node->TCP_fd[My_node->id],(struct sockaddr*)&addr,&addrlen))==-1)
     /*error*/ return 5;
 
-    //in case there is an error sending the message timeout
-
-    fd_set fdset;
-    struct timeval tv;
-
-    FD_ZERO(&fdset);
-    FD_SET(newfd, &fdset);
-
-    //Define timeout
-    tv.tv_sec = 5; 
-    tv.tv_usec = 0;
-
-    int sret = select(newfd + 1, &fdset, NULL, NULL, &tv);
-
-    if (sret == 0) {
-        // TIMEOUT
-        printf("Erro: Timeout do servidor TCP\n");
-        close(newfd);
-        return 0; 
-    } else if (sret == -1) {
-        // ERRO in select
-        printf("ERROR: select error\n"); 
-        close(newfd);
-        return 5;
-    }
-
-    n=read(newfd, Routing_protocol, TCP_Routing_protocol_len);
-    if(n==-1)/*error*/return 5;
-
-    if(sscanf(Routing_protocol, "%*s %d", &cli_id) != 1){
-        return 6;
-    }
-
-    My_node->TCP_fd[cli_id] = newfd;
-
-    My_node->number_of_TCP_channels++;
-
-    return_code = process_NEIGHBOR_message(cli_id, My_node);
-    if(return_code != 0) return return_code;
+    My_node->TCP_pending_fd[My_node->number_pending_fd] = newfd;
+    My_node->number_pending_fd++;
 
     return 0;
 }
@@ -146,11 +109,11 @@ int Send_chat_protocol_to_id(char* chat_protocol, int dest_id, Node_info* My_nod
     return Send_routing_protocol_to_id(chat_protocol, dest_id, My_node);
 }
 
-int Recive_message_from_id(char* message, ssize_t Max_len, int sender_id, Node_info* My_node){
-    ssize_t n=read(My_node->TCP_fd[sender_id], message, Max_len);
+int Recive_message_from_fd(char* message, int sender_fd, Node_info* My_node){
+    ssize_t n=read(sender_fd, message, TCP_Chat_protocol_len);
     if(n==-1)/*error*/return 5;
 
-    if(n < Max_len){
+    if(n < TCP_Chat_protocol_len){
         message[n] = '\0';
     }else{
         //lost info not suposed to happen if it happends we need bigger buffer
@@ -162,12 +125,10 @@ int Recive_message_from_id(char* message, ssize_t Max_len, int sender_id, Node_i
 }
 
 
-
-
 /********************************************************************************* -----UDP----- *********************************************************************************/
 
 int send_message_to_UDP_server(char* message, char* response, Node_info* My_node){
-    int fd,errcode;
+    int fd, errcode, return_code;
     ssize_t n;
     socklen_t addrlen;
     struct addrinfo hints,*res;
@@ -180,39 +141,19 @@ int send_message_to_UDP_server(char* message, char* response, Node_info* My_node
     hints.ai_family=AF_INET; //IPv4
     hints.ai_socktype=SOCK_DGRAM; //UDP socket
 
-    errcode=getaddrinfo(My_node->UDP_Server_IP, My_node->Node_TCP_Port, &hints, &res);
+    errcode=getaddrinfo(My_node->UDP_Server_IP, My_node->UDP_Server_Port, &hints, &res);
     if(errcode!=0) /*error*/ return 5;
 
     n=sendto(fd,message,strlen(message),0,res->ai_addr,res->ai_addrlen);
     if(n==-1) /*error*/ return 5;
 
-    //check if we recive message in time
-    
-    fd_set fdset;
-    struct timeval tv;
-
-    FD_ZERO(&fdset);
-    FD_SET(fd, &fdset);
-
-    //Define timeout
-    tv.tv_sec = 5; 
-    tv.tv_usec = 0;
-
-    int sret = select(fd + 1, &fdset, NULL, NULL, &tv);
-
-    if (sret == 0) {
-        // TIMEOUT
-        printf("Erro: Timeout do servidor UDP\n");
-        freeaddrinfo(res);
-        close(fd);
-        return 0; 
-    } else if (sret == -1) {
-        // ERRO in select
-        printf("ERROR: select error\n");
-        freeaddrinfo(res);
-        close(fd);
-        return 5;
-    }
+    return_code = select_timeout(fd);
+    if(return_code != 0){
+        if(return_code == 7){
+            return 0;
+        }
+        return return_code;
+    } 
 
     addrlen=sizeof(addr);
     n=recvfrom(fd,response,UDP_response_size,0,(struct sockaddr*)&addr,&addrlen);
@@ -227,6 +168,35 @@ int send_message_to_UDP_server(char* message, char* response, Node_info* My_node
 
     freeaddrinfo(res);
     close(fd);
+
+    return 0;
+}
+
+// return 7 if timeout
+int select_timeout(int fd){
+    fd_set fdset;
+    struct timeval tv;
+
+    FD_ZERO(&fdset);
+    FD_SET(fd, &fdset);
+
+    //Define timeout
+    tv.tv_sec = 5; 
+    tv.tv_usec = 0;
+
+    int sret = select(fd + 1, &fdset, NULL, NULL, &tv);
+
+    if (sret == 0) {
+        // TIMEOUT
+        printf("Erro: The response took to long to arive or got lost\n");
+        close(fd);
+        return 7; 
+    } else if (sret == -1) {
+        // ERRO in select
+        printf("ERROR: select error\n"); 
+        close(fd);
+        return 5;
+    }
 
     return 0;
 }

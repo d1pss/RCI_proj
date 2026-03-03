@@ -49,7 +49,7 @@ int Coord_neighbors(int dest_id, int except_id, Node_info* My_node){
     int return_code;
     for(int i = 0, n_con = 0; i < Number_of_ids; i++){
         if(My_node->TCP_fd[i] != -1){
-            if((i =! My_node->id) && (i != except_id)){
+            if((i != My_node->id) && (i != except_id)){
                 n_con++;
                 return_code = Send_COORD(i, dest_id, My_node);
                 if(return_code != 0) return return_code;
@@ -67,7 +67,7 @@ int Route_neighbors(int dest_id, int except_id, Node_info* My_node){
     int return_code;
     for(int i = 0, n_con = 0; i < Number_of_ids; i++){
         if(My_node->TCP_fd[i] != -1){
-            if((i =! My_node->id) && (i != except_id)){
+            if((i != My_node->id) && (i != except_id)){
                 n_con++;
                 return_code = Send_ROUTE(i, dest_id, My_node);
                 if(return_code != 0) return return_code;
@@ -155,8 +155,8 @@ int process_ROUTE_message(int dest_id, int dist_to_dest_id_from_neighbor, int ne
 
     int new_dist_to_dest_id = dist_to_dest_id_from_neighbor + 1, return_code;
 
-    if(new_dist_to_dest_id < My_node->dist[dest_id]){
-        //better way found
+    if(new_dist_to_dest_id < My_node->dist[dest_id] || neighbor_id == My_node->succ[dest_id]){
+        //better way found or my succ found a new way
         My_node->dist[dest_id] = new_dist_to_dest_id;
         My_node->succ[dest_id] = neighbor_id;
 
@@ -262,12 +262,22 @@ int process_CHAT_message(char* Chat_protocol, int dest_id, Node_info* My_node){
     return 0;
 }
 
-int process_NEIGHBOR_message(int neigbor_id, Node_info* My_node){
-    char Routing_protocol[TCP_Routing_protocol_len];
-    int cli_id, return_code;
+int process_NEIGHBOR_message(char* Routing_protocol, int newfd, Node_info* My_node){
+    int neigbor_id, return_code;
+
+    if(sscanf(Routing_protocol, "%*s %d", &neigbor_id) != 1){
+        return 6;
+    }
+
+    My_node->TCP_fd[neigbor_id] = newfd;
+
+    My_node->number_of_TCP_channels++;
+
+    return_code = Send_ROUTE(neigbor_id, My_node->id, My_node);
+    if(return_code != 0) return return_code;
 
     for(int i = 0; i < Number_of_ids; i++){
-        if(My_node->succ[i] != -1){
+        if(My_node->succ[i] != -1 && My_node->state[i] == 0){
             return_code = Send_ROUTE(neigbor_id, i, My_node);
             if(return_code != 0) return return_code;
         }

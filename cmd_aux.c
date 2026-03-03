@@ -15,7 +15,7 @@ int print_ids(char* response, int net){
             printf("List of Nodes in network %d:\n", net);
             for(int i = first_id_index; i < response_len; i += 3){
                 id_to_print[0] = response[i];
-                id_to_print[0] = response[i+1];
+                id_to_print[1] = response[i+1];
                 printf("%s\n", id_to_print);
             }
             return 0;
@@ -242,9 +242,11 @@ Node_info* init_Node(char** argv, int argc){
         My_node->state[i] = 0;
         My_node->succ_coord[i] = -1;
         My_node->TCP_fd[i] = -1;
+        My_node->TCP_pending_fd[i] = -1;
         My_node->pending_uncoord[i] = 0;
     }
 
+    My_node->number_pending_fd = 0;
     My_node->number_of_TCP_channels = 0;
 
     My_node->is_in_net = false;
@@ -264,16 +266,4 @@ bool is_string_a_number(char* string){
 
 
     return true;
-}
-
-char* int_id_to_string(int id){
-    char id_as_char[Id_len];
-    sprintf(id_as_char, "%02d", id);
-    return id_as_char;
-}
-
-char* int_net_to_string(int net){
-    char net_as_char[Net_len];
-    sprintf(net_as_char, "%03d", net);
-    return net_as_char;
 }

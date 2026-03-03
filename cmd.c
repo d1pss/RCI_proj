@@ -116,6 +116,10 @@ int process_command(char *input, Node_info* My_node){
     return 0;
 }
 
+int cmd_message(char* dest_id_as_char, char* chat_message, Node_info* My_node){
+    
+}
+
 int cmd_join(char* net_as_char, char* id_as_char, Node_info* My_node){
     int return_code;
     bool does_id_exist;
@@ -189,7 +193,10 @@ int cmd_add_edge(char* dest_id_as_char, Node_info* My_node){
         return 0;
     }
 
-    return_code = get_id_info(dest_ip, dest_Port, &is_dest_id_in_net, int_net_to_string(My_node->net), dest_id_as_char, My_node);
+    char net_as_char[Net_len];
+    sprintf(net_as_char, "%03d", My_node->net);
+
+    return_code = get_id_info(dest_ip, dest_Port, &is_dest_id_in_net, net_as_char, dest_id_as_char, My_node);
 
     if(return_code != 0){
         return return_code;
@@ -202,15 +209,7 @@ int cmd_add_edge(char* dest_id_as_char, Node_info* My_node){
 
     return_code = Create_and_Connect_TCP_client(dest_ip, dest_Port, dest_id, My_node);
 
-    if(return_code != 0){
-        return return_code;
-    }
-
-    
-
-
-
-    return 0;
+    return return_code;
 }
 
 int cmd_show_nodes(char* net_as_char, Node_info* My_node){
@@ -260,7 +259,7 @@ void cmd_leave(Node_info* My_node){
    //loop para verificar quantos vizinhos tem e quais são...
      for(i = 0, n_con = 0; i < Number_of_ids; i++){
                 if(My_node->TCP_fd[i] != -1){
-                    if(i =! atoi(My_node->id)){
+                    if(i != atoi(My_node->id)){
                         sprintf(neigbours[n_con], "%02d", i);
                         n_con++;
                     }

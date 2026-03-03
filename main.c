@@ -32,10 +32,15 @@ int main(int argc, char *argv[]){
             FD_SET(My_node->TCP_fd[My_node->id],&fdset);
 
             nfds = max(nfds, My_node->TCP_fd[My_node->id]);
+
+            for(i = 0; i < My_node->number_pending_fd; i++){
+                FD_SET(My_node->TCP_pending_fd[i],&fdset);
+                nfds = max(nfds, My_node->TCP_pending_fd[i]);
+            }
         
             for(i = 0, n_con = 0; i < Number_of_ids; i++){
                 if(My_node->TCP_fd[i] != -1){
-                    if((i =! My_node->id)){
+                    if((i != My_node->id)){
                         n_con++;
                         FD_SET(My_node->TCP_fd[i],&fdset);
                         nfds = max(nfds, My_node->TCP_fd[i]);
@@ -75,19 +80,31 @@ int main(int argc, char *argv[]){
 
                 }
 
+                for(i = 0; i < My_node->number_pending_fd; i++){
+                    if(FD_ISSET(My_node->TCP_pending_fd[i],&fdset)){
+                        //reciving NEIGHBOR message
+
+                        return_code = Recive_message_from_fd(TCP_message, My_node->TCP_pending_fd[i], My_node);
+                        if(manage_return_code(return_code) == 1) return 0;
+
+                        return_code = process_NEIGHBOR_message(TCP_message, My_node->TCP_pending_fd[i], My_node);
+                        if(manage_return_code(return_code) == 1) return 0;
+                        
+                    }
+                }
+
                 for(i = 0; i < Number_of_ids; i++){
                     if(My_node->TCP_fd[i] != -1){
-                        if((i =! My_node->id)){
+                        if((i != My_node->id)){
                             if(FD_ISSET(My_node->TCP_fd[i],&fdset)){
                                 //the id (i) is sending us a message
 
-                                return_code = Recive_message_from_id(TCP_message, TCP_Chat_protocol_len, i, My_node);
+                                return_code = Recive_message_from_fd(TCP_message, My_node->TCP_fd[i], My_node);
                                 if(manage_return_code(return_code) == 1) return 0;
 
                                 return_code = process_TCP_message(TCP_message, i, My_node);
                                 if(manage_return_code(return_code) == 1) return 0;
 
-                                break;
                             }
                         }
                     }

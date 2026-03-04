@@ -1,3 +1,74 @@
+Rodrigo_Oliveira
+woof_2
+Invisível
+
+Rodrigo_Oliveira — 28/02/2026 23:41
+olá sou o rodrigo
+e sou bué triste
+Imagem
+Rodrigo_Oliveira — 28/02/2026 23:42
+😭
+😭
+Rodrigo_Oliveira — 28/02/2026 23:42
+😭
+😭
+😭
+😭
+😭
+😭
+😭
+😭
+😭
+😭
+😭
+😭
+Rodrigo_Oliveira — Ontem às 21:21
+rodrgio
+n te chibes
+mas
+bora dar ban ao boneco do caio
+ele tá a ser bué chato
+Rodrigo_Oliveira — Ontem às 21:21
+qual é
+soldado?
+Rodrigo_Oliveira — Ontem às 21:21
+soldado ya
+Rodrigo_Oliveira — Ontem às 21:21
+temos de fingir que n o tamos a ouvir
+Rodrigo_Oliveira — Ontem às 21:22
+sim
+mas mete nos ultimos segundos
+Rodrigo_Oliveira — Ontem às 21:22
+avisa os outros
+Rodrigo_Oliveira — 13:59
+My_node->dist[t] = INF;
+            My_node->succ[t] = -1;
+            My_node->state[t] = 1;
+Rodrigo_Oliveira — 14:10
+#include "cmd.h"
+
+
+//return 0 return to main without error
+//return 1 return to main to exit the program without errors
+//return 2 return to main to with network error
+
+message.txt
+10 KB
+for(i = 0, n_con = 0; i < Number_of_ids; i++){
+        if(My_node->TCP_fd[i] != -1){
+            if(i != atoi(My_node->id)){
+                sprintf(neigbours[n_con], "%02d", i);
+                n_con++;
+            }
+            if(n_con == My_node->number_of_TCP_chanels) break;
+        }
+    }
+﻿
+Rodrigo_Oliveira
+d1pss
+ 
+ 
+ 
 #include "cmd.h"
 
 
@@ -16,19 +87,7 @@ int process_command(char *input, Node_info* My_node){
 
     if(num_args == 1){
         if(!strcmp(cmd, "l")){
-            if(My_node->is_in_net){
-                //the node is in the network, so leave
-                //cmd_leave();
-                
-                My_node->is_in_net = false;
-
-                return 0;
-            }else{
-                //the node is not in the network, so no need to leave
-                printf("The node is not in the network, so no need to leave\n");
-
-                return 0;
-            }
+           
             
 
         }else if(!strcmp(cmd, "x")){
@@ -253,23 +312,29 @@ int cmd_show_nodes(char* net_as_char, Node_info* My_node){
 }
 
 void cmd_leave(Node_info* My_node){
-   /* char message[Max_message_len], response[Max_response_size], op, neigbours[Number_of_ids][Id_len];
+   char message[Max_message_len], response[Max_response_size], op, neigbours[Number_of_ids][Id_len];
     int n_neighbours, i;
     
-   //loop para verificar quantos vizinhos tem e quais são...
-     for(i = 0, n_con = 0; i < Number_of_ids; i++){
-                if(My_node->TCP_fd[i] != -1){
-                    if(i != atoi(My_node->id)){
-                        sprintf(neigbours[n_con], "%02d", i);
-                        n_con++;
-                    }
-                    if(n_con == My_node->number_of_TCP_chanels) break;
-                }
-            }
-    //loop para fechar ligação tcp com os vizinhos...
-    for(i = 0; i < n_con; i++){
-        cmd_remove_edge(neigbours[i], My_node);
+    if(!My_node->is_in_net){
+        //the node is not in the network, so no need to leave
+        printf("The node is not in the network, so no need to leave\n");
+        
+        return 0;
     }
+
+
+   //loop para fechar ligação tcp com os vizinhos...
+     for(i = 0, n_con = 0; i < Number_of_ids; i++){
+        if(My_node->TCP_fd[i] != -1){
+            if(i != atoi(My_node->id)){
+                Close_TCP_Client(i, My_node);
+                n_con++;
+            }
+            if(n_con == My_node->number_of_TCP_chanels) break;
+        }
+    }
+    
+    
 
     sprintf(message, "REG 100 3 %s %s\n", My_node->net, My_node->id);
     send_message_to_UDP_server(message, response, Server);
@@ -278,38 +343,41 @@ void cmd_leave(Node_info* My_node){
         if (op == '4') {
             // id succesfully left
             Close_TCP_Server(Node_info* My_node);
+            My_node->is_in_net = false;
             return 0;
         }else{
         //error code from network
         return 2 ;
         }
     }
-    */
+    return 0;
 
 }
 
 int cmd_remove_edge(char* id_to_remove_as_char, Node_info* My_node){
     //int return_code;
-
     if(!is_string_a_number(id_to_remove_as_char) || atoi(id_to_remove_as_char) > 99 || atoi(id_to_remove_as_char) < 0){
         //error id value should be between 99 and 00
         printf("ERROR: input argument id should be a number between 00 and 99\n");
         return 3;
     }
+    if(!My_node->is_in_net){
+        //mensagem de erro que o node n existe na net
+    }  
 
     int id_to_remove = atoi(id_to_remove_as_char);
 
-
-    if(!My_node->is_in_net){
-        //mensagem de erro que o node n existe na net
+    Close_TCP_Client(id_to_remove, My_node);
+    
+    for(i = 0, n_con = 0; i < Number_of_ids; i++){
+        if(My_node->succ[i] == id_to_remove){
+            My_node->dist[t] = INF;
+            My_node->succ[t] = -1;
+            My_node->state[t] = 1;
+            Coord_neighbors(i , -1, My_node);
+        }
     }
-
-    if(My_node->TCP_fd[id_to_remove] == -1){
-        //mensagem de erro que o node n é vizinho
-    }
-
-
-
     return 0;
 }
+
 

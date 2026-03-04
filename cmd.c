@@ -80,10 +80,17 @@ d1pss
 //return 5 return to main to exit the program with seting up UDP or TCP error
 //return 6 return to main to exit the program with not suposed to happend case
 int process_command(char *input, Node_info* My_node){
-    char arguments[cmd_arguments][cmd_len], cmd[cmd_len];
+    char arguments[cmd_arguments][cmd_len], cmd[cmd_len], chat_message[TCP_Chat_protocol_len];
     int num_args, return_code;
     
-    num_args = sscanf(input, "%s %s %s %s", cmd, arguments[0], arguments[1], arguments[2]);
+    num_args = sscanf(input, "%s", cmd);
+
+    if(!strcmp(cmd, "m")){
+        num_args += sscanf(input, "%*s %s %[^\n]", cmd, arguments[0], chat_message);
+    }else{
+        num_args += sscanf(input, "%*s %s %s %s", cmd, arguments[0], arguments[1], arguments[2]);
+    }
+    
 
     if(num_args == 1){
         if(!strcmp(cmd, "l")){
@@ -105,6 +112,8 @@ int process_command(char *input, Node_info* My_node){
 
         }else if(!strcmp(cmd, "a")){
 
+            return cmd_announce(My_node);
+
         }else if(!strcmp(cmd, "sm")){
 
         }else if(!strcmp(cmd, "em")){
@@ -119,15 +128,7 @@ int process_command(char *input, Node_info* My_node){
 
         if(!strcmp(cmd, "n")){
 
-            if(!is_string_a_number(arguments[0]) || atoi(arguments[0]) > 999 || atoi(arguments[0]) < 0){
-                //error net value should be between 999 and 000
-                printf("ERROR: input argument net should be a number between 000 and 999\n");
-                return 3;
-            }
-
-            return_code = cmd_show_nodes(arguments[0], My_node);
-
-            return return_code;
+           return cmd_show_nodes(arguments[0], My_node);
 
         }else if(!strcmp(cmd, "ae")){
 
@@ -148,6 +149,8 @@ int process_command(char *input, Node_info* My_node){
             return cmd_join(arguments[0], arguments[1], My_node);
 
         }else if(!strcmp(cmd, "m")){
+
+            return cmd_message(arguments[0], chat_message, My_node);
 
         }else if(!strcmp(cmd, "dj")){
 
@@ -176,7 +179,22 @@ int process_command(char *input, Node_info* My_node){
 }
 
 int cmd_message(char* dest_id_as_char, char* chat_message, Node_info* My_node){
-    
+    int dest_id = atoi(dest_id_as_char), return_code;
+
+    return_code = Send_CHAT(My_node->succ[dest_id], dest_id, chat_message, My_node);
+
+    return return_code;
+}
+
+int cmd_announce(Node_info* My_node){
+    if (!My_node->is_in_net) return 0;
+
+    //Define my route
+    My_node->dist[My_node->id] = 0;
+    My_node->succ[My_node->id] = -1;
+    My_node->state[My_node->id] = 0;
+
+    return Route_neighbors(My_node->id, -1, My_node);
 }
 
 int cmd_join(char* net_as_char, char* id_as_char, Node_info* My_node){
@@ -256,10 +274,7 @@ int cmd_add_edge(char* dest_id_as_char, Node_info* My_node){
     sprintf(net_as_char, "%03d", My_node->net);
 
     return_code = get_id_info(dest_ip, dest_Port, &is_dest_id_in_net, net_as_char, dest_id_as_char, My_node);
-
-    if(return_code != 0){
-        return return_code;
-    }
+    if(return_code != 0) return return_code;
 
     if(!is_dest_id_in_net){
         printf("The destiny id does not exist in network use show nodes to know the ids in network\n");
@@ -286,10 +301,7 @@ int cmd_show_nodes(char* net_as_char, Node_info* My_node){
     sprintf(message, "NODES 100 0 %s\n", net_as_char);
 
     return_code = send_message_to_UDP_server(message, response, My_node);
-
-    if(return_code != 0){
-        return return_code;
-    }
+    if(return_code != 0) return return_code;
 
     int items_found = sscanf(response, "%*s %*s %c", &op);
 

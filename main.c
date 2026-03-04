@@ -84,12 +84,19 @@ int main(int argc, char *argv[]){
                     if(FD_ISSET(My_node->TCP_pending_fd[i],&fdset)){
                         //reciving NEIGHBOR message
 
-                        return_code = Recive_message_from_fd(TCP_message, My_node->TCP_pending_fd[i], My_node);
+                        return_code = Recive_message_from_fd(TCP_message, i, -1, My_node->TCP_pending_fd[i], My_node);
                         if(manage_return_code(return_code) == 1) return 0;
+
+                        if(return_code == 7){
+                            close(My_node->TCP_pending_fd[i]);
+                            remove_pending_fd(i, My_node);
+                        }
+
 
                         return_code = process_NEIGHBOR_message(TCP_message, My_node->TCP_pending_fd[i], My_node);
                         if(manage_return_code(return_code) == 1) return 0;
                         
+                        remove_pending_fd(i, My_node);
                     }
                 }
 
@@ -99,8 +106,15 @@ int main(int argc, char *argv[]){
                             if(FD_ISSET(My_node->TCP_fd[i],&fdset)){
                                 //the id (i) is sending us a message
 
-                                return_code = Recive_message_from_fd(TCP_message, My_node->TCP_fd[i], My_node);
+                                return_code = Recive_message_from_fd(TCP_message, i, i, My_node->TCP_fd[i], My_node);
                                 if(manage_return_code(return_code) == 1) return 0;
+
+                                if(return_code == 7){
+                                    char sender_id_as_char[Id_len];
+                                    sprintf(sender_id_as_char, "%02d", i);
+                                    return_code = cmd_remove_edge(sender_id_as_char, My_node);
+                                    if(manage_return_code(return_code) == 1) return 0;
+                                }
 
                                 return_code = process_TCP_message(TCP_message, i, My_node);
                                 if(manage_return_code(return_code) == 1) return 0;
@@ -118,30 +132,4 @@ int main(int argc, char *argv[]){
     return 0;
 }
 
-
-//return 0 continue program
-//return 1 exit program
-int manage_return_code(int return_code){
-    if(return_code == 0 || return_code == 3){
-        return 0;
-    }
-
-    if(return_code == 1 || return_code == 4 || return_code == 5 || return_code == 6){
-        return 1;
-    }
-
-    char response;
-
-    printf("do you wish to proced with the program?\n[y/n]\n");
-    scanf("%c", &response);
-    if(response == 'y'){
-        return 1;
-    }else if(response == 'n'){
-        return 0;
-    }else{
-        printf("unknown response exting...\n");
-        return 1;
-    }
-
-}
 

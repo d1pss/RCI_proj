@@ -18,6 +18,7 @@ void cmd_leave(Node_info* My_node);
 
 int cmd_remove_edge(char* id_to_remove, Node_info* My_node);
 
+int cmd_announce(Node_info* My_node);
 
 
 #endif

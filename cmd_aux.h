@@ -24,4 +24,8 @@ Node_info* init_Node(char** argv, int argc);
 
 bool is_string_a_number(char* string);
 
+int manage_return_code(int return_code);
+
+void remove_pending_fd(int index_to_remove, Node_info* My_node);
+
 #endif

@@ -4,6 +4,8 @@
 
 #include "struct_and_constants.h"
 #include "routing.h"
+#include "cmd_aux.h"
+#include "cmd.h"
 
 
 /********************************************************************************* -----TCP----- *********************************************************************************/
@@ -22,7 +24,7 @@ int Send_routing_protocol_to_id(char* routing_protocol, int dest_id, Node_info* 
 
 int Send_chat_protocol_to_id(char* chat_protocol, int dest_id, Node_info* My_node);
 
-int Recive_message_from_fd(char* message, int sender_fd, Node_info* My_node);
+int Recive_message_from_fd(char* message, int sender_index, int sender_id, int sender_fd, Node_info* My_node);
 
 /********************************************************************************* -----UDP----- *********************************************************************************/
 

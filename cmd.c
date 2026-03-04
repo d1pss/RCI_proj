@@ -53,6 +53,8 @@ int process_command(char *input, Node_info* My_node){
 
         }else if(!strcmp(cmd, "a")){
 
+            return cmd_announce(My_node);
+
         }else if(!strcmp(cmd, "sm")){
 
         }else if(!strcmp(cmd, "em")){
@@ -123,6 +125,17 @@ int cmd_message(char* dest_id_as_char, char* chat_message, Node_info* My_node){
     return_code = Send_CHAT(My_node->succ[dest_id], dest_id, chat_message, My_node);
 
     return return_code;
+}
+
+int cmd_announce(Node_info* My_node){
+    if (!My_node->is_in_net) return 0;
+
+    //Define my route
+    My_node->dist[My_node->id] = 0;
+    My_node->succ[My_node->id] = -1;
+    My_node->state[My_node->id] = 0;
+
+    return Route_neighbors(My_node->id, -1, My_node);
 }
 
 int cmd_join(char* net_as_char, char* id_as_char, Node_info* My_node){

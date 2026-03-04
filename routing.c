@@ -284,11 +284,8 @@ int process_NEIGHBOR_message(char* Routing_protocol, int newfd, Node_info* My_no
 
     My_node->number_of_TCP_channels++;
 
-    return_code = Send_ROUTE(neigbor_id, My_node->id, My_node);
-    if(return_code != 0) return return_code;
-
     for(int i = 0; i < Number_of_ids; i++){
-        if(My_node->succ[i] != -1 && My_node->state[i] == 0){
+        if((My_node->succ[i] != -1 && My_node->state[i] == 0) || i == My_node->id){
             return_code = Send_ROUTE(neigbor_id, i, My_node);
             if(return_code != 0) return return_code;
         }

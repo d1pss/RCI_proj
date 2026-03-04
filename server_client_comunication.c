@@ -74,8 +74,12 @@ int Create_and_Connect_TCP_client(char* dest_IP, char* dest_Port, int dest_id, N
 
     My_node->number_of_TCP_channels++;
 
-    return_code = Send_ROUTE(dest_id, My_node->id, My_node);
-    if(return_code != 0) return return_code;
+    for(int i = 0; i < Number_of_ids; i++){
+        if((My_node->dist[i] < INF && My_node->state[i] == 0)){
+            return_code = Send_ROUTE(dest_id, i, My_node);
+            if(return_code != 0) return return_code;
+        }
+    }
 
     return 0;
 }
@@ -109,9 +113,16 @@ int Send_chat_protocol_to_id(char* chat_protocol, int dest_id, Node_info* My_nod
     return Send_routing_protocol_to_id(chat_protocol, dest_id, My_node);
 }
 
-int Recive_message_from_fd(char* message, int sender_fd, Node_info* My_node){
+//return 7 indicates closed TCP con
+int Recive_message_from_fd(char* message, int sender_index, int sender_id, int sender_fd, Node_info* My_node){
+    int return_code;
     ssize_t n=read(sender_fd, message, TCP_Chat_protocol_len);
     if(n==-1)/*error*/return 5;
+
+    if(n == 0){
+        //TCP connection was closed
+        return 7;
+    }
 
     if(n < TCP_Chat_protocol_len){
         message[n] = '\0';

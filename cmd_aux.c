@@ -267,3 +267,39 @@ bool is_string_a_number(char* string){
 
     return true;
 }
+
+//return 0 continue program
+//return 1 exit program
+int manage_return_code(int return_code){
+    if(return_code == 0 || return_code == 3){
+        return 0;
+    }
+
+    if(return_code == 1 || return_code == 4 || return_code == 5 || return_code == 6){
+        return 1;
+    }
+
+    char response;
+
+    printf("do you wish to proced with the program?\n[y/n]\n");
+    scanf("%c", &response);
+    if(response == 'y'){
+        return 1;
+    }else if(response == 'n'){
+        return 0;
+    }else{
+        printf("unknown response exting...\n");
+        return 1;
+    }
+
+}
+
+void remove_pending_fd(int index_to_remove, Node_info* My_node){
+    if(index_to_remove + 1 == Number_of_ids || My_node->TCP_pending_fd[index_to_remove + 1] == -1){
+        My_node->TCP_pending_fd[index_to_remove] = -1;
+        return;
+    }else{
+        My_node->TCP_pending_fd[index_to_remove] = My_node->TCP_pending_fd[index_to_remove + 1];
+        return remove_pending_fd(index_to_remove + 1, My_node);
+    } 
+}

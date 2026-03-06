@@ -30,6 +30,6 @@ int process_UNCOORD_message(int dest_id, int neighbor_id, Node_info* My_node);
 
 int process_CHAT_message(char* Chat_protocol, int dest_id, Node_info* My_node);
 
-int process_NEIGHBOR_message(char* Routing_protocol, int newfd, Node_info* My_node);
+int process_NEIGHBOR_message(char* Routing_protocol, int newfd, int *sender_id, Node_info* My_node);
 
 #endif 

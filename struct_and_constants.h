@@ -22,8 +22,9 @@
 
 #define UDP_response_size 320 //100 id x 3 for the 2 digits and the \n + 20 for the first line in the worse case
 #define UDP_message_len 40 //in the worse case using REG we can have 38 chars so 40 is a safe lenght
-#define TCP_Routing_protocol_len 9 //in the worse case using (NEIGHBOR\0) we have 9 chars
+#define TCP_Routing_protocol_len 24 //in the worse case using (ROUTE dest n\n\0) we have 14 chars
 #define TCP_Chat_protocol_len 140  // in the worse case using (CHAT origin dest chat\n) we can have 139 chars
+#define TCP_buffer_len 2048 // in case we recieve various messages from one id in the same read we need a big buffer to store it all
 #define cmd_len 32 //in the worse case using (dae id idIP idTCP) we can have 30 chars so 32 is a safe lenght
 #define cmd_arguments 3 //in the worse case using (dae id idIP idTCP) we have 3 arguments
 #define IP_len 16 // in the worse case we have xxx.xxx.xxx.xxx\0 that is 16 chars
@@ -31,8 +32,7 @@
 #define Number_of_ids 100 // we have ids between 00 and 99, so 100 in total
 #define Id_len 3 // ids are two digit numbers so xx\0 that is 3 chars
 #define Net_len 4 // nets are three digit numbers so xxx\0 that is 4 chars
-#define INF 100 // 99 is the max dist possible so 100 can act as infinity
-
+#define INF 256 // 99 is the max dist possible so 256 can act as infinity
 
 
 typedef struct _Node_information{
@@ -56,10 +56,13 @@ typedef struct _Node_information{
     bool state[Number_of_ids];
     int succ_coord[Number_of_ids];
     int pending_uncoord[Number_of_ids];
+    int unique_tid;
 
     //flags
     bool is_in_net;
     bool is_monitoring;
+    bool debug;
+    bool adv_debug;
 }Node_info;
 
 

@@ -30,6 +30,9 @@ int Recive_message_from_fd(char* message, int sender_index, int sender_id, int s
 
 int send_message_to_UDP_server(char* message, char* response, Node_info* My_node);
 
+// return 7 if timeout
+int select_timeout(int fd);
+
 
 
 

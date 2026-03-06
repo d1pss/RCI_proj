@@ -34,10 +34,12 @@ int print_ids(char* response, int net){
 
 //return 7 means the net is full
 int add_id_to_net(char* net, char* id, Node_info* My_node){
-    char message[UDP_message_len], response[UDP_response_size], op;
-    int return_code;
-    
-    sprintf(message, "REG 100 0 %s %s %s %s\n",net, id, My_node->Node_TCP_IP, My_node->Node_TCP_Port);
+    char message[UDP_message_len], response[UDP_response_size], op_str[2], op;
+    int return_code, tid, tid_read;
+
+    tid = get_unique_tid(My_node);
+
+    sprintf(message, "REG %03d 0 %s %s %s %s\n", tid, net, id, My_node->Node_TCP_IP, My_node->Node_TCP_Port);
 
     return_code = send_message_to_UDP_server(message, response, My_node);
 
@@ -45,9 +47,20 @@ int add_id_to_net(char* net, char* id, Node_info* My_node){
         return return_code;
     }
 
-    int items_found = sscanf(response, "%*s %*s %c", &op);
+    int items_found = sscanf(response, "%*s %d %s", &tid_read, op_str);
 
-    if (items_found == 1) {
+    if(tid != tid_read){
+        printf("Recived message with difrent tid lost data\n");
+        return 0;
+    }
+
+    op = op_str[0];
+
+    if(My_node->debug){
+        printf("SEND: %sRECIVE: %s\n", message, response);
+    }
+
+    if (items_found == 2) {
         if (op == '1') {
             // id sucessfuly registred in network
             printf("id was sucessfuly registred in network\n");
@@ -76,10 +89,12 @@ int add_id_to_net(char* net, char* id, Node_info* My_node){
 }
 
 int get_id_info(char* id_IP ,char* id_Port ,bool* get_id_info ,char* net ,char* id , Node_info* My_node){
-    char message[UDP_message_len], response[UDP_response_size], op;
-    int return_code, items_found;
+    char message[UDP_message_len], response[UDP_response_size], op, op_str[2];
+    int return_code, items_found, tid, tid_read;
 
-    sprintf(message, "CONTACT 100 0 %s %s\n", net, id);
+    tid = get_unique_tid(My_node);
+
+    sprintf(message, "CONTACT %03d 0 %s %s\n", tid, net, id);
    
 
     return_code = send_message_to_UDP_server(message, response, My_node);
@@ -89,12 +104,23 @@ int get_id_info(char* id_IP ,char* id_Port ,bool* get_id_info ,char* net ,char* 
     }
 
     if(id_IP == NULL || id_Port == NULL){
-        items_found = sscanf(response, "%*s %*s %c %*s", &op);
+        items_found = sscanf(response, "%*s %d %s", &tid_read, op_str);
     }else{
-        items_found = sscanf(response, "%*s %*s %c %*s %s %s", &op, id_IP, id_Port);
+        items_found = sscanf(response, "%*s %d %s %*s %*s %s %s", &tid_read, op_str, id_IP, id_Port);
     }
 
-    if (items_found == 1 || items_found == 3) {
+    if(tid != tid_read){
+        printf("Recived message with difrent tid lost data\n");
+        return 0;
+    }
+
+    if(My_node->debug){
+        printf("SEND: %sRECIVE: %s\n", message, response);
+    }
+
+    op = op_str[0];
+
+    if (items_found == 2 || items_found == 4) {
         if (op == '1') {
             // ID exists in net
             *get_id_info = true;
@@ -116,7 +142,7 @@ int get_id_info(char* id_IP ,char* id_Port ,bool* get_id_info ,char* net ,char* 
         }
     }else{
         //response is not as expected
-        printf("DEBUG ERROR: (in function add_id_to_net) if we are reading this the server sent a bad formated response (not suposed to do that)\n");
+        printf("DEBUG ERROR: (in function get_id_info) if we are reading this the server sent a bad formated response (not suposed to do that)\n");
         
         return 6;
     }
@@ -251,6 +277,10 @@ Node_info* init_Node(char** argv, int argc){
 
     My_node->is_in_net = false;
     My_node->is_monitoring = false;
+    My_node->unique_tid = 0;
+
+    My_node->debug = true;
+    My_node->adv_debug = true;
 
     return My_node;
 }
@@ -270,27 +300,33 @@ bool is_string_a_number(char* string){
 
 //return 0 continue program
 //return 1 exit program
-int manage_return_code(int return_code){
+int manage_return_code(int return_code, Node_info* My_node){
     if(return_code == 0 || return_code == 3){
         return 0;
     }
 
     if(return_code == 1 || return_code == 4 || return_code == 5 || return_code == 6){
+        if(My_node->is_in_net){
+            (void)cmd_leave(My_node);
+        }
         return 1;
     }
 
     char response;
 
     printf("do you wish to proced with the program?\n[y/n]\n");
-    scanf("%c", &response);
-    if(response == 'y'){
+    if(scanf("%c", &response) == 1){
+        if(response == 'y'){
         return 1;
-    }else if(response == 'n'){
-        return 0;
-    }else{
-        printf("unknown response exting...\n");
-        return 1;
+        }else if(response == 'n'){
+            return 0;
+        }else{
+            printf("unknown response exting...\n");
+            return 1;
+        }
     }
+    printf("unknown response exting...\n");
+    return 1;
 
 }
 
@@ -302,4 +338,12 @@ void remove_pending_fd(int index_to_remove, Node_info* My_node){
         My_node->TCP_pending_fd[index_to_remove] = My_node->TCP_pending_fd[index_to_remove + 1];
         return remove_pending_fd(index_to_remove + 1, My_node);
     } 
+}
+
+int get_unique_tid(Node_info* My_node){
+    if(My_node->unique_tid == 1000){
+        My_node->unique_tid = 0;
+    }
+    My_node->unique_tid++;
+    return My_node->unique_tid - 1;
 }

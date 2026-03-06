@@ -1,74 +1,3 @@
-Rodrigo_Oliveira
-woof_2
-Invisível
-
-Rodrigo_Oliveira — 28/02/2026 23:41
-olá sou o rodrigo
-e sou bué triste
-Imagem
-Rodrigo_Oliveira — 28/02/2026 23:42
-😭
-😭
-Rodrigo_Oliveira — 28/02/2026 23:42
-😭
-😭
-😭
-😭
-😭
-😭
-😭
-😭
-😭
-😭
-😭
-😭
-Rodrigo_Oliveira — Ontem às 21:21
-rodrgio
-n te chibes
-mas
-bora dar ban ao boneco do caio
-ele tá a ser bué chato
-Rodrigo_Oliveira — Ontem às 21:21
-qual é
-soldado?
-Rodrigo_Oliveira — Ontem às 21:21
-soldado ya
-Rodrigo_Oliveira — Ontem às 21:21
-temos de fingir que n o tamos a ouvir
-Rodrigo_Oliveira — Ontem às 21:22
-sim
-mas mete nos ultimos segundos
-Rodrigo_Oliveira — Ontem às 21:22
-avisa os outros
-Rodrigo_Oliveira — 13:59
-My_node->dist[t] = INF;
-            My_node->succ[t] = -1;
-            My_node->state[t] = 1;
-Rodrigo_Oliveira — 14:10
-#include "cmd.h"
-
-
-//return 0 return to main without error
-//return 1 return to main to exit the program without errors
-//return 2 return to main to with network error
-
-message.txt
-10 KB
-for(i = 0, n_con = 0; i < Number_of_ids; i++){
-        if(My_node->TCP_fd[i] != -1){
-            if(i != atoi(My_node->id)){
-                sprintf(neigbours[n_con], "%02d", i);
-                n_con++;
-            }
-            if(n_con == My_node->number_of_TCP_chanels) break;
-        }
-    }
-﻿
-Rodrigo_Oliveira
-d1pss
- 
- 
- 
 #include "cmd.h"
 
 
@@ -81,14 +10,14 @@ d1pss
 //return 6 return to main to exit the program with not suposed to happend case
 int process_command(char *input, Node_info* My_node){
     char arguments[cmd_arguments][cmd_len], cmd[cmd_len], chat_message[TCP_Chat_protocol_len];
-    int num_args, return_code;
-    
+    int num_args;
+
     num_args = sscanf(input, "%s", cmd);
 
     if(!strcmp(cmd, "m")){
-        num_args += sscanf(input, "%*s %s %[^\n]", cmd, arguments[0], chat_message);
+        num_args += sscanf(input, "%*s %s %[^\n]", arguments[0], chat_message);
     }else{
-        num_args += sscanf(input, "%*s %s %s %s", cmd, arguments[0], arguments[1], arguments[2]);
+        num_args = sscanf(input, "%s %s %s %s", cmd, arguments[0], arguments[1], arguments[2]);
     }
     
 
@@ -116,7 +45,11 @@ int process_command(char *input, Node_info* My_node){
 
         }else if(!strcmp(cmd, "sm")){
 
+            return cmd_monotoring(true, My_node);
+
         }else if(!strcmp(cmd, "em")){
+
+            return cmd_monotoring(false, My_node);
 
         }else{
             //error bad input
@@ -132,9 +65,15 @@ int process_command(char *input, Node_info* My_node){
 
         }else if(!strcmp(cmd, "ae")){
 
+            return cmd_add_edge(arguments[0], My_node);
+
         }else if(!strcmp(cmd, "re")){
 
+            return cmd_remove_edge(arguments[0], My_node);
+
         }else if(!strcmp(cmd, "sr")){
+
+            return cmd_show_routing(arguments[0], My_node);
 
         }else{
             //error bad input
@@ -178,6 +117,25 @@ int process_command(char *input, Node_info* My_node){
     return 0;
 }
 
+int cmd_monotoring(bool start, Node_info* My_node){
+    if(start){
+        if(My_node->is_monitoring){
+            printf("Already Monotoring\n");
+        }else{
+            printf("Started Monotoring\n");
+            My_node->is_monitoring = true;
+        }
+    }else{
+        if(My_node->is_monitoring){
+            printf("Ended Monotoring\n");
+            My_node->is_monitoring = false;
+        }else{
+            printf("Currently not monotoring\n");
+        }
+    }
+    return 0;
+}
+
 int cmd_message(char* dest_id_as_char, char* chat_message, Node_info* My_node){
     int dest_id = atoi(dest_id_as_char), return_code;
 
@@ -187,7 +145,10 @@ int cmd_message(char* dest_id_as_char, char* chat_message, Node_info* My_node){
 }
 
 int cmd_announce(Node_info* My_node){
-    if (!My_node->is_in_net) return 0;
+    if (!My_node->is_in_net){
+        printf("The node is not in the network, cant anounce\n");
+        return 0;
+    } 
 
     //Define my route
     My_node->dist[My_node->id] = 0;
@@ -195,6 +156,34 @@ int cmd_announce(Node_info* My_node){
     My_node->state[My_node->id] = 0;
 
     return Route_neighbors(My_node->id, -1, My_node);
+}
+
+int cmd_show_routing(char* dest_id_as_char, Node_info* My_node){
+    if(!is_string_a_number(dest_id_as_char) || atoi(dest_id_as_char) > 99 || atoi(dest_id_as_char) < 0){
+        //error id value should be between 99 and 00
+        printf("ERROR: input argument id should be a number between 00 and 99\n");
+        return 3;
+    }
+
+    if (!My_node->is_in_net){
+        printf("The node is not in the network, cant show route\n");
+        return 0;
+    } 
+
+    int dest_id = atoi(dest_id_as_char);
+
+    if(My_node->succ[dest_id] == -1){
+        printf("The dest_id that was given does not have a way to current node\n");
+        return 0;
+    }
+
+    if(My_node->state[dest_id] == 0){
+        printf("The way to dest_id is cordenated and the succ id is %02d and the distance is %d\n", My_node->succ[dest_id], My_node->dist[dest_id]);
+    }else{
+        printf("The Node is expedition state\n");
+    }
+
+    return 0;
 }
 
 int cmd_join(char* net_as_char, char* id_as_char, Node_info* My_node){
@@ -287,8 +276,8 @@ int cmd_add_edge(char* dest_id_as_char, Node_info* My_node){
 }
 
 int cmd_show_nodes(char* net_as_char, Node_info* My_node){
-    char message[UDP_message_len], response[UDP_response_size], op;
-    int return_code;
+    char message[UDP_message_len], response[UDP_response_size], op, op_str[2];
+    int return_code, tid, tid_read;
 
     if(!is_string_a_number(net_as_char) || atoi(net_as_char) > 999 || atoi(net_as_char) < 0){
         //error net value should be between 999 and 000
@@ -298,14 +287,27 @@ int cmd_show_nodes(char* net_as_char, Node_info* My_node){
 
     int net = atoi(net_as_char);
 
-    sprintf(message, "NODES 100 0 %s\n", net_as_char);
+    tid = get_unique_tid(My_node);
+
+    sprintf(message, "NODES %03d 0 %s\n", tid, net_as_char);
 
     return_code = send_message_to_UDP_server(message, response, My_node);
     if(return_code != 0) return return_code;
 
-    int items_found = sscanf(response, "%*s %*s %c", &op);
+    int items_found = sscanf(response, "%*s %d %s", &tid_read, op_str);
 
-    if (items_found == 1) {
+    if(tid != tid_read){
+        printf("Recived message with difrent tid lost data\n");
+        return 0;
+    }
+
+    if(My_node->debug){
+        printf("SEND: %sRECIVE: %s\n", message, response);
+    }
+
+    op = op_str[0];
+
+    if (items_found == 2) {
         if (op == '1') {
             // message contains the ids in the network
             return_code = print_ids(response, net);
@@ -323,9 +325,9 @@ int cmd_show_nodes(char* net_as_char, Node_info* My_node){
     } 
 }
 
-void cmd_leave(Node_info* My_node){
-   char message[Max_message_len], response[Max_response_size], op, neigbours[Number_of_ids][Id_len];
-    int n_neighbours, i;
+int cmd_leave(Node_info* My_node){
+    char message[UDP_message_len], response[UDP_response_size], op;
+    int i, n_con;
     
     if(!My_node->is_in_net){
         //the node is not in the network, so no need to leave
@@ -336,29 +338,33 @@ void cmd_leave(Node_info* My_node){
 
 
    //loop para fechar ligação tcp com os vizinhos...
-     for(i = 0, n_con = 0; i < Number_of_ids; i++){
+    for(i = 0, n_con = 0; i < Number_of_ids; i++){
         if(My_node->TCP_fd[i] != -1){
-            if(i != atoi(My_node->id)){
+            if(i != My_node->id){
                 Close_TCP_Client(i, My_node);
                 n_con++;
             }
-            if(n_con == My_node->number_of_TCP_chanels) break;
+            if(n_con == My_node->number_of_TCP_channels) break;
         }
     }
     
-    
+    My_node->dist[My_node->id] = INF;
 
-    sprintf(message, "REG 100 3 %s %s\n", My_node->net, My_node->id);
-    send_message_to_UDP_server(message, response, Server);
+    sprintf(message, "REG 100 3 %03d %02d\n", My_node->net, My_node->id);
+    send_message_to_UDP_server(message, response, My_node);
+
     int items_found = sscanf(response, "%*s %*s %c", &op);
+
     if (items_found == 1) {
         if (op == '4') {
             // id succesfully left
-            Close_TCP_Server(Node_info* My_node);
+            Close_TCP_Server(My_node);
             My_node->is_in_net = false;
             return 0;
         }else{
         //error code from network
+        Close_TCP_Server(My_node);
+        printf("ERROR: error code (%c) from network using this comand %s\nIn the location of this error its advised to leave it may have compromised My_node struct\n", op, message);
         return 2 ;
         }
     }
@@ -367,29 +373,33 @@ void cmd_leave(Node_info* My_node){
 }
 
 int cmd_remove_edge(char* id_to_remove_as_char, Node_info* My_node){
-    //int return_code;
+    int i;
     if(!is_string_a_number(id_to_remove_as_char) || atoi(id_to_remove_as_char) > 99 || atoi(id_to_remove_as_char) < 0){
         //error id value should be between 99 and 00
         printf("ERROR: input argument id should be a number between 00 and 99\n");
         return 3;
     }
     if(!My_node->is_in_net){
-        //mensagem de erro que o node n existe na net
+        printf("The node is not in the network.\n");
+        return 0;
     }  
 
     int id_to_remove = atoi(id_to_remove_as_char);
 
+    if(My_node->succ[id_to_remove] != id_to_remove){
+        printf("The id given to remove is not our neighbor.\n");
+        return 0;
+    }
+
     Close_TCP_Client(id_to_remove, My_node);
     
-    for(i = 0, n_con = 0; i < Number_of_ids; i++){
+    for(i = 0; i < Number_of_ids; i++){
         if(My_node->succ[i] == id_to_remove){
-            My_node->dist[t] = INF;
-            My_node->succ[t] = -1;
-            My_node->state[t] = 1;
+            My_node->dist[i] = INF;
+            My_node->succ[i] = -1;
+            My_node->state[i] = 1;
             Coord_neighbors(i , -1, My_node);
         }
     }
     return 0;
 }
-
-

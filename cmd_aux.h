@@ -22,6 +22,8 @@ bool is_Port_invalid(char* Port);
 
 Node_info* init_Node(char** argv, int argc);
 
+void reset_My_node(Node_info* My_node);
+
 bool is_string_a_number(char* string);
 
 int manage_return_code(int return_code, Node_info* My_node);
@@ -29,5 +31,9 @@ int manage_return_code(int return_code, Node_info* My_node);
 void remove_pending_fd(int index_to_remove, Node_info* My_node);
 
 int get_unique_tid(Node_info* My_node);
+
+int fragment_buffer(char* buffer, char*** frag_buffer, int* n_frags);
+
+void free_frag_buffer(char** buffer, int n_frags);
 
 #endif

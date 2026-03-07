@@ -8,7 +8,10 @@ int Create_TCP_Server(Node_info* My_node){
     struct addrinfo hints,*res;
 
     My_node->TCP_fd[My_node->id]=socket(AF_INET,SOCK_STREAM,0); //TCP socket
-    if (My_node->TCP_fd[My_node->id]==-1) return 5; //error
+    if (My_node->TCP_fd[My_node->id]==-1){
+        printf("TCP error (in Create_TCP_Server) socket\n");
+        return 5;
+    }
 
     memset(&hints,0,sizeof hints);
     hints.ai_family=AF_INET; //IPv4
@@ -16,12 +19,20 @@ int Create_TCP_Server(Node_info* My_node){
     hints.ai_flags=AI_PASSIVE;
 
     errcode=getaddrinfo(NULL,My_node->Node_TCP_Port,&hints,&res);
-    if((errcode)!=0)/*error*/return 5;
-
+    if((errcode)!=0){
+        printf("TCP error (in Create_TCP_Server) getaddrinfo\n");
+        return 5;
+    }
     n=bind(My_node->TCP_fd[My_node->id],res->ai_addr,res->ai_addrlen);
-    if(n==-1) /*error*/ return 5;
+    if(n==-1){
+        printf("TCP error (in Create_TCP_Server) bind\n");
+        return 5;
+    }
 
-    if(listen(My_node->TCP_fd[My_node->id], Number_of_ids)==-1)/*error*/return 5;
+    if(listen(My_node->TCP_fd[My_node->id], Number_of_ids)==-1){
+        printf("TCP error (in Create_TCP_Server) listen\n");
+        return 5;
+    }
 
     freeaddrinfo(res);
 
@@ -38,8 +49,10 @@ int accept_TCP_connection(Node_info* My_node){
     int newfd;
 
     addrlen=sizeof(addr);
-    if((newfd=accept(My_node->TCP_fd[My_node->id],(struct sockaddr*)&addr,&addrlen))==-1)
-    /*error*/ return 5;
+    if((newfd=accept(My_node->TCP_fd[My_node->id],(struct sockaddr*)&addr,&addrlen))==-1){
+        printf("TCP error (in accept_TCP_connection) accept\n");
+        return 5;
+    }  
 
     My_node->TCP_pending_fd[My_node->number_pending_fd] = newfd;
     My_node->number_pending_fd++;
@@ -120,8 +133,10 @@ int Close_TCP_Server(Node_info* My_node){
 int Send_routing_protocol_to_id(char* routing_protocol, int dest_id, Node_info* My_node){
 
     ssize_t n=write(My_node->TCP_fd[dest_id],routing_protocol, strlen(routing_protocol));
-    if(n==-1)/*error*/return 5;
-
+    if(n==-1){
+        printf("TCP error (in Send_routing_protocol_to_id) write\n");
+        return 5;
+    }  
     return 0;
 }
 
@@ -131,15 +146,18 @@ int Send_chat_protocol_to_id(char* chat_protocol, int dest_id, Node_info* My_nod
 
 //return 7 indicates closed TCP con
 int Recive_message_from_fd(char* message, int sender_index, int sender_id, int sender_fd, Node_info* My_node){
-    ssize_t n=read(sender_fd, message, TCP_Chat_protocol_len);
-    if(n==-1)/*error*/return 5;
+    ssize_t n=read(sender_fd, message, TCP_buffer_len);
+    if(n==-1){
+        printf("TCP error (in Recive_message_from_fd) read\n");
+        return 5;
+    }  
 
     if(n == 0){
         //TCP connection was closed
         return 7;
     }
 
-    if(n < TCP_Chat_protocol_len){
+    if(n < TCP_buffer_len){
         message[n] = '\0';
     }else{
         //lost info not suposed to happen if it happends we need bigger buffer
@@ -184,9 +202,6 @@ int send_message_to_UDP_server(char* message, char* response, Node_info* My_node
 
     return_code = select_timeout(fd);
     if(return_code != 0){
-        if(return_code == 7){
-            return 0;
-        }
         return return_code;
     } 
 
@@ -228,7 +243,7 @@ int select_timeout(int fd){
         // TIMEOUT
         printf("Erro: The response took to long to arive or got lost\n");
         close(fd);
-        return 7; 
+        return 2; 
     } else if (sret == -1) {
         // ERRO in select
         printf("ERROR: select error\n"); 

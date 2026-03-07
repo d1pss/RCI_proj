@@ -14,11 +14,9 @@ int Send_ROUTE(int neighbor_id_to_send, int dest_id, Node_info* My_node);
 
 int Send_CHAT(int succ_id, int dest_id, char* chat_message, Node_info* My_node);
 
-//the except id can go as -1 as to not exept any id
-int Coord_neighbors(int dest_id, int except_id, Node_info* My_node);
+int Coord_neighbors(int dest_id, Node_info* My_node);
 
-//the except id can go as -1 as to not exept any id
-int Route_neighbors(int dest_id, int except_id, Node_info* My_node);
+int Route_neighbors(int dest_id, Node_info* My_node);
 
 int process_TCP_message(char* input, int neigbor_id, Node_info* MY_node);
 

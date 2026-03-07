@@ -40,12 +40,10 @@ int main(int argc, char *argv[]){
             }
         
             for(i = 0, n_con = 0; i < Number_of_ids; i++){
-                if(My_node->TCP_fd[i] != -1){
-                    if((i != My_node->id)){
-                        n_con++;
-                        FD_SET(My_node->TCP_fd[i],&fdset);
-                        nfds = max(nfds, My_node->TCP_fd[i]);
-                    }
+                if(My_node->TCP_fd[i] != -1 && (i != My_node->id)){
+                    n_con++;
+                    FD_SET(My_node->TCP_fd[i],&fdset);
+                    nfds = max(nfds, My_node->TCP_fd[i]);
                     if(n_con == My_node->number_of_TCP_channels) break;
                 }
             }
@@ -82,11 +80,11 @@ int main(int argc, char *argv[]){
                 }
 
                 for(i = 0; i < My_node->number_pending_fd; i++){
+                    if(My_node->TCP_pending_fd[i] == -1) break;
                     if(FD_ISSET(My_node->TCP_pending_fd[i],&fdset)){
                         //reciving NEIGHBOR message
 
                         return_code = Recive_message_from_fd(TCP_buffer, i, -1, My_node->TCP_pending_fd[i], My_node);
-                        if(manage_return_code(return_code, My_node) == 1) return 0;
 
                         //TCP connection was closed by the other side
                         if(return_code == 7){
@@ -94,6 +92,8 @@ int main(int argc, char *argv[]){
                             remove_pending_fd(i, My_node);
                             continue;
                         }
+
+                        if(manage_return_code(return_code, My_node) == 1) return 0;
 
                         return_code = fragment_buffer(TCP_buffer, &fragmented_input, &n_of_frag_inputs);
                         if(manage_return_code(return_code, My_node) == 1) return 0;
@@ -116,35 +116,37 @@ int main(int argc, char *argv[]){
                 }
 
                 for(i = 0; i < Number_of_ids; i++){
-                    if(My_node->TCP_fd[i] != -1){
-                        if((i != My_node->id)){
-                            if(FD_ISSET(My_node->TCP_fd[i],&fdset)){
-                                //the id (i) is sending us a message
+                    if(My_node->TCP_fd[i] != -1 && (i != My_node->id)){
+                        if(FD_ISSET(My_node->TCP_fd[i],&fdset)){
+                            //the id (i) is sending us a message
 
-                                return_code = Recive_message_from_fd(TCP_buffer, i, i, My_node->TCP_fd[i], My_node);
+                            return_code = Recive_message_from_fd(TCP_buffer, i, i, My_node->TCP_fd[i], My_node);
+
+                            //TCP connection was closed by the other side
+                            if(return_code == 7){
+                                char sender_id_as_char[Id_len];
+                                sprintf(sender_id_as_char, "%02d", i);
+                                return_code = cmd_remove_edge(sender_id_as_char, My_node);
                                 if(manage_return_code(return_code, My_node) == 1) return 0;
-
-                                //TCP connection was closed by the other side
-                                if(return_code == 7){
-                                    char sender_id_as_char[Id_len];
-                                    sprintf(sender_id_as_char, "%02d", i);
-                                    return_code = cmd_remove_edge(sender_id_as_char, My_node);
-                                    if(manage_return_code(return_code, My_node) == 1) return 0;
-                                    continue;
-                                }
-
-                                return_code = fragment_buffer(TCP_buffer, &fragmented_input, &n_of_frag_inputs);
-                                if(manage_return_code(return_code, My_node) == 1) return 0;
-
-                                for(j = 0; j < n_of_frag_inputs; j++){
-                                    return_code = process_TCP_message(fragmented_input[j], i, My_node);
-                                    if(manage_return_code(return_code, My_node) == 1) return 0;
-                                }
-                                
-                                free_frag_buffer(fragmented_input, n_of_frag_inputs);
-
+                                continue;
                             }
+
+                            if(manage_return_code(return_code, My_node) == 1) return 0;
+
+                            
+
+                            return_code = fragment_buffer(TCP_buffer, &fragmented_input, &n_of_frag_inputs);
+                            if(manage_return_code(return_code, My_node) == 1) return 0;
+
+                            for(j = 0; j < n_of_frag_inputs; j++){
+                                return_code = process_TCP_message(fragmented_input[j], i, My_node);
+                                if(manage_return_code(return_code, My_node) == 1) return 0;
+                            }
+                            
+                            free_frag_buffer(fragmented_input, n_of_frag_inputs);
+
                         }
+                        
                     }
                 }
 
@@ -153,51 +155,9 @@ int main(int argc, char *argv[]){
         }
     }
 
+    free(My_node);
+
     return 0;
 }
 
 
-int fragment_buffer(char* buffer, char*** frag_buffer, int* n_frags){
-    if(buffer == NULL || buffer[0] == '\0'){
-        printf("DEBUG ERROR: (in function fragment_buffer) buffer is empy or points to NULL");
-        return 6;
-    }
-
-    int buffer_len = (int)strlen(buffer), curr_frag_strt_indx = 0, curr_frag_len = 0, curr_frag = 0;
-
-    for(int i = 0; i < buffer_len; i++){
-        if(buffer[i] == '\n'){
-            (*n_frags)++;
-        }
-    }
-
-    (*frag_buffer) = (char**)malloc((*n_frags) * sizeof(char*));
-    if((*frag_buffer) == NULL) return 4;
-
-    for(int i = 0; i < buffer_len; i++){
-        curr_frag_len++;
-        if(buffer[i] == '\n'){
-
-            (*frag_buffer)[curr_frag] = (char*)malloc((curr_frag_len + 1) * sizeof(char));
-            if((*frag_buffer)[curr_frag] == NULL) return 4;
-
-            for(int k = 0; k < curr_frag_len; k++){
-                (*frag_buffer)[curr_frag][k] = buffer[curr_frag_strt_indx + k];
-            }
-
-            (*frag_buffer)[curr_frag][curr_frag_len] = '\0';
-
-            curr_frag_len = 0;
-            curr_frag_strt_indx = i + 1;
-            curr_frag++;
-        }
-    }
-    return 0;
-}
-
-void free_frag_buffer(char** buffer, int n_frags){
-    for(int i = 0; i < n_frags; i++){
-        free(buffer[i]);
-    }
-    free(buffer);
-}

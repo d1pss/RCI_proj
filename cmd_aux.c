@@ -247,9 +247,12 @@ bool is_Port_invalid(char* Port){
 Node_info* init_Node(char** argv, int argc){
     Node_info* My_node = (Node_info*)malloc(sizeof(Node_info));
     if(My_node == NULL){
-        printf("ERROR: error alocating memory");
+        printf("ERROR: error alocating memory\n");
         return NULL;
     }
+
+    My_node->debug = true;
+    My_node->adv_debug = true;
 
     strcpy(My_node->Node_TCP_IP, argv[1]);
     strcpy(My_node->Node_TCP_Port, argv[2]);
@@ -262,6 +265,12 @@ Node_info* init_Node(char** argv, int argc){
         strcpy(My_node->UDP_Server_Port, DEFAULT_UDP_PORT);
     }
 
+    reset_My_node(My_node);
+
+    return My_node;
+}
+
+void reset_My_node(Node_info* My_node){
     for(int i = 0; i < Number_of_ids; i++){
         My_node->dist[i] = INF;
         My_node->succ[i] = -1;
@@ -279,10 +288,7 @@ Node_info* init_Node(char** argv, int argc){
     My_node->is_monitoring = false;
     My_node->unique_tid = 0;
 
-    My_node->debug = true;
-    My_node->adv_debug = true;
-
-    return My_node;
+    return;
 }
 
 bool is_string_a_number(char* string){
@@ -306,6 +312,9 @@ int manage_return_code(int return_code, Node_info* My_node){
     }
 
     if(return_code == 1 || return_code == 4 || return_code == 5 || return_code == 6){
+        if(My_node->debug){
+            printf("exiting whith error code %d\n", return_code);
+        }
         if(My_node->is_in_net){
             (void)cmd_leave(My_node);
         }
@@ -316,9 +325,9 @@ int manage_return_code(int return_code, Node_info* My_node){
 
     printf("do you wish to proced with the program?\n[y/n]\n");
     if(scanf("%c", &response) == 1){
-        if(response == 'y'){
+        if(response == 'n'){
         return 1;
-        }else if(response == 'n'){
+        }else if(response == 'y'){
             return 0;
         }else{
             printf("unknown response exting...\n");
@@ -346,4 +355,51 @@ int get_unique_tid(Node_info* My_node){
     }
     My_node->unique_tid++;
     return My_node->unique_tid - 1;
+}
+
+int fragment_buffer(char* buffer, char*** frag_buffer, int* n_frags){
+    if(buffer == NULL || buffer[0] == '\0'){
+        printf("DEBUG ERROR: (in function fragment_buffer) buffer is empy or points to NULL");
+        return 6;
+    }
+
+    (*n_frags) = 0;
+
+    int buffer_len = (int)strlen(buffer), curr_frag_strt_indx = 0, curr_frag_len = 0, curr_frag = 0;
+
+    for(int i = 0; i < buffer_len; i++){
+        if(buffer[i] == '\n'){
+            (*n_frags)++;
+        }
+    }
+
+    (*frag_buffer) = (char**)malloc((*n_frags) * sizeof(char*));
+    if((*frag_buffer) == NULL) return 4;
+
+    for(int i = 0; i < buffer_len; i++){
+        curr_frag_len++;
+        if(buffer[i] == '\n'){
+
+            (*frag_buffer)[curr_frag] = (char*)malloc((curr_frag_len + 1) * sizeof(char));
+            if((*frag_buffer)[curr_frag] == NULL) return 4;
+
+            for(int k = 0; k < curr_frag_len; k++){
+                (*frag_buffer)[curr_frag][k] = buffer[curr_frag_strt_indx + k];
+            }
+
+            (*frag_buffer)[curr_frag][curr_frag_len] = '\0';
+
+            curr_frag_len = 0;
+            curr_frag_strt_indx = i + 1;
+            curr_frag++;
+        }
+    }
+    return 0;
+}
+
+void free_frag_buffer(char** buffer, int n_frags){
+    for(int i = 0; i < n_frags; i++){
+        free(buffer[i]);
+    }
+    free(buffer);
 }

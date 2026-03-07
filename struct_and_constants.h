@@ -25,7 +25,7 @@
 #define TCP_Routing_protocol_len 24 //in the worse case using (ROUTE dest n\n\0) we have 14 chars
 #define TCP_Chat_protocol_len 140  // in the worse case using (CHAT origin dest chat\n) we can have 139 chars
 #define TCP_buffer_len 2048 // in case we recieve various messages from one id in the same read we need a big buffer to store it all
-#define cmd_len 32 //in the worse case using (dae id idIP idTCP) we can have 30 chars so 32 is a safe lenght
+#define cmd_len 140 //in the worse case using (m xx 128c) we can have 133 chars so 140 is a safe lenght
 #define cmd_arguments 3 //in the worse case using (dae id idIP idTCP) we have 3 arguments
 #define IP_len 16 // in the worse case we have xxx.xxx.xxx.xxx\0 that is 16 chars
 #define Port_len 6 // in the worse case we have xxxxx\0 that is 6 chars

@@ -24,7 +24,7 @@ int process_command(char *input, Node_info* My_node){
     if(num_args == 1){
         if(!strcmp(cmd, "l")){
            
-            
+            return cmd_leave(My_node);
 
         }else if(!strcmp(cmd, "x")){
 
@@ -111,8 +111,8 @@ int process_command(char *input, Node_info* My_node){
 
     }else{
         //unexpected sscanf return
-        printf("DEBUG ERROR: (in function process_command) if we are reading this the sscanf returned an unexpected number (not suposed to do that)\n");
-        return 6;
+        printf("The comand used (%s) is not a valid input or the number of arguments for that comand is wrong\n", cmd);
+        return 3;
     }
     return 0;
 }
@@ -137,7 +137,23 @@ int cmd_monotoring(bool start, Node_info* My_node){
 }
 
 int cmd_message(char* dest_id_as_char, char* chat_message, Node_info* My_node){
+    if(!is_string_a_number(dest_id_as_char) || atoi(dest_id_as_char) > 99 || atoi(dest_id_as_char) < 0){
+        //error id value should be between 99 and 00
+        printf("ERROR: input argument id should be a number between 00 and 99\n");
+        return 3;
+    }
+
+    if (!My_node->is_in_net){
+        printf("Our node is not in the network, cant message\n");
+        return 0;
+    } 
+
     int dest_id = atoi(dest_id_as_char), return_code;
+
+    if(My_node->succ[dest_id] == -1){
+        printf("The Node with id(%02d) is not connected to us id(%02d), cant send message\n", dest_id, My_node->id);
+        return 0;
+    }
 
     return_code = Send_CHAT(My_node->succ[dest_id], dest_id, chat_message, My_node);
 
@@ -146,16 +162,17 @@ int cmd_message(char* dest_id_as_char, char* chat_message, Node_info* My_node){
 
 int cmd_announce(Node_info* My_node){
     if (!My_node->is_in_net){
-        printf("The node is not in the network, cant anounce\n");
+        printf("Our node is not in the network, cant anounce\n");
         return 0;
     } 
 
+    printf("anounced existence to neighbors\n");
     //Define my route
     My_node->dist[My_node->id] = 0;
     My_node->succ[My_node->id] = -1;
     My_node->state[My_node->id] = 0;
 
-    return Route_neighbors(My_node->id, -1, My_node);
+    return Route_neighbors(My_node->id, My_node);
 }
 
 int cmd_show_routing(char* dest_id_as_char, Node_info* My_node){
@@ -206,7 +223,7 @@ int cmd_join(char* net_as_char, char* id_as_char, Node_info* My_node){
 
     if(My_node->is_in_net){
         //no need to join node is already in th network
-        printf("The node is allready in the network\n");
+        printf("Our node is allready in the network, no need to join again\n");
         return 0;
     }
 
@@ -218,7 +235,7 @@ int cmd_join(char* net_as_char, char* id_as_char, Node_info* My_node){
 
     if(does_id_exist){
         //error id already exists must use a difrent one
-        printf("The id chosen (%d) is in use. Must use a difrent id to add the node to the network %d\n", id, net);
+        printf("The id chosen (%d) is in use. Must use a difrent id to add our node to the network %d\n", id, net);
         return 0;
     }
 
@@ -255,7 +272,12 @@ int cmd_add_edge(char* dest_id_as_char, Node_info* My_node){
     int dest_id = atoi(dest_id_as_char);
 
     if(!My_node->is_in_net){
-        printf("Origin node is not in the network use the join comand first\n");
+        printf("Our node is not in the network, cant add edge\n");
+        return 0;
+    }
+
+    if(My_node->TCP_fd[dest_id] != -1){
+        printf("Our node id(%02d) is already connected to id(%02d)\n", My_node->id, dest_id);
         return 0;
     }
 
@@ -331,7 +353,7 @@ int cmd_leave(Node_info* My_node){
     
     if(!My_node->is_in_net){
         //the node is not in the network, so no need to leave
-        printf("The node is not in the network, so no need to leave\n");
+        printf("Our node is not in the network, so no need to leave\n");
         
         return 0;
     }
@@ -348,7 +370,7 @@ int cmd_leave(Node_info* My_node){
         }
     }
     
-    My_node->dist[My_node->id] = INF;
+    reset_My_node(My_node);
 
     sprintf(message, "REG 100 3 %03d %02d\n", My_node->net, My_node->id);
     send_message_to_UDP_server(message, response, My_node);
@@ -395,10 +417,17 @@ int cmd_remove_edge(char* id_to_remove_as_char, Node_info* My_node){
     
     for(i = 0; i < Number_of_ids; i++){
         if(My_node->succ[i] == id_to_remove){
+            
+            if (My_node->adv_debug) {
+                char dist_to_prt[4];
+                My_node->dist[i] == INF ? (void)strcpy(dist_to_prt, "INF") : (void)sprintf(dist_to_prt, "%02d", My_node->dist[i]);
+                printf("DEBUG [%02d]: dist %s -> INF | succ %02d -> -1 | state 0 -> 1\n", i, dist_to_prt, My_node->succ[i]);
+            }
+
             My_node->dist[i] = INF;
             My_node->succ[i] = -1;
             My_node->state[i] = 1;
-            Coord_neighbors(i , -1, My_node);
+            Coord_neighbors(i, My_node);
         }
     }
     return 0;

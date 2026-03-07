@@ -75,35 +75,33 @@ int Send_CHAT(int succ_id, int dest_id, char* chat_message, Node_info* My_node){
     return return_code;
 }
 
-//the except id can go as -1 as to not exept any id
-int Coord_neighbors(int dest_id, int except_id, Node_info* My_node){
+int Coord_neighbors(int dest_id, Node_info* My_node){
     int return_code;
     for(int i = 0, n_con = 0; i < Number_of_ids; i++){
         if(My_node->TCP_fd[i] != -1){
-            if((i != My_node->id) && (i != except_id)){
+            if((i != My_node->id)){
                 n_con++;
                 return_code = Send_COORD(i, dest_id, My_node);
                 if(return_code != 0) return return_code;
 
                 My_node->pending_uncoord[dest_id]++;
             }
-            if (n_con == My_node->number_of_TCP_channels - (except_id != -1)) break;
+            if (n_con == My_node->number_of_TCP_channels) break;
         }
     }
     return 0;
 }
 
-//the except id can go as -1 as to not exept any id
-int Route_neighbors(int dest_id, int except_id, Node_info* My_node){
+int Route_neighbors(int dest_id, Node_info* My_node){
     int return_code;
     for(int i = 0, n_con = 0; i < Number_of_ids; i++){
         if(My_node->TCP_fd[i] != -1){
-            if((i != My_node->id) && (i != except_id)){
+            if((i != My_node->id)){
                 n_con++;
                 return_code = Send_ROUTE(i, dest_id, My_node);
                 if(return_code != 0) return return_code;
             }
-            if (n_con == My_node->number_of_TCP_channels - (except_id != -1)) break;
+            if (n_con == My_node->number_of_TCP_channels) break;
         }
     }
     return 0;
@@ -211,14 +209,14 @@ int process_ROUTE_message(int dest_id, int dist_to_dest_id_from_neighbor, int ne
     }
 
     if(new_dist_to_dest_id < My_node->dist[dest_id] || neighbor_id == My_node->succ[dest_id]){
-        //better way found or my succ found a new way
+        //better way found or my succ found a new wayr
 
         if (My_node->adv_debug) {
-            char d_old[4], d_new[12], s_old[4];
-            My_node->dist[dest_id] == INF ? (void)strcpy(d_old, "INF") : (void)sprintf(d_old, "%02d", My_node->dist[dest_id]);
-            new_dist_to_dest_id == INF   ? (void)strcpy(d_new, "INF") : (void)sprintf(d_new, "%02d", new_dist_to_dest_id);
-            My_node->succ[dest_id] == -1  ? (void)strcpy(s_old, "-1")  : (void)sprintf(s_old, "%02d", My_node->succ[dest_id]);
-            printf("DEBUG [%02d]: dist %s -> %s | succ %s -> %02d\n", dest_id, d_old, d_new, s_old, neighbor_id);
+            char dist_to_prt[4], new_dist_to_prt[12], succ_to_print[4];
+            My_node->dist[dest_id] == INF ? (void)strcpy(dist_to_prt, "INF") : (void)sprintf(dist_to_prt, "%02d", My_node->dist[dest_id]);
+            new_dist_to_dest_id == INF   ? (void)strcpy(new_dist_to_prt, "INF") : (void)sprintf(new_dist_to_prt, "%02d", new_dist_to_dest_id);
+            My_node->succ[dest_id] == -1  ? (void)strcpy(succ_to_print, "-1")  : (void)sprintf(succ_to_print, "%02d", My_node->succ[dest_id]);
+            printf("DEBUG [%02d]: dist %s -> %s | succ %s -> %02d\n", dest_id, dist_to_prt, new_dist_to_prt, succ_to_print, neighbor_id);
         }
 
         My_node->dist[dest_id] = new_dist_to_dest_id;
@@ -226,7 +224,7 @@ int process_ROUTE_message(int dest_id, int dist_to_dest_id_from_neighbor, int ne
 
         if((My_node->state[dest_id] == 0)){
             //send new route to neigbors (exept neighbor_id this feture is not in use)
-            return_code = Route_neighbors(dest_id, -1, My_node);
+            return_code = Route_neighbors(dest_id, My_node);
             if(return_code != 0) return return_code;
 
         }//else //need to wait before sending this new route
@@ -249,10 +247,10 @@ int process_COORD_message(int dest_id, int neighbor_id, Node_info* My_node){
             //i lost my route to dest_id
 
             if (My_node->adv_debug) {
-            char d_old[4], s_old[4];
-            My_node->dist[dest_id] == INF ? (void)strcpy(d_old, "INF") : (void)sprintf(d_old, "%02d", My_node->dist[dest_id]);
-            My_node->succ[dest_id] == -1  ? (void)strcpy(s_old, "-1")  : (void)sprintf(s_old, "%02d", My_node->succ[dest_id]);
-            printf("DEBUG [%02d]: dist %s -> INF | succ %s -> -1 | state 0 -> 1\n", dest_id, d_old, s_old);
+            char dist_to_prt[4], succ_to_print[4];
+            My_node->dist[dest_id] == INF ? (void)strcpy(dist_to_prt, "INF") : (void)sprintf(dist_to_prt, "%02d", My_node->dist[dest_id]);
+            My_node->succ[dest_id] == -1  ? (void)strcpy(succ_to_print, "-1")  : (void)sprintf(succ_to_print, "%02d", My_node->succ[dest_id]);
+            printf("DEBUG [%02d]: dist %s -> INF | succ %s -> -1 | state 0 -> 1\n", dest_id, dist_to_prt, succ_to_print);
             }
 
             My_node->dist[dest_id] = INF;
@@ -260,7 +258,7 @@ int process_COORD_message(int dest_id, int neighbor_id, Node_info* My_node){
             My_node->state[dest_id] = 1;
             My_node->succ_coord[dest_id] = neighbor_id;
 
-            return_code = Coord_neighbors(dest_id, neighbor_id, My_node);
+            return_code = Coord_neighbors(dest_id, My_node);
             if(return_code != 0) return return_code;
 
         }else{
@@ -286,14 +284,14 @@ int process_UNCOORD_message(int dest_id, int neighbor_id, Node_info* My_node){
         //all coords have responded
 
         if (My_node->adv_debug) {
-            printf("DEBUG [%02d]: state 0 -> 1\n", dest_id);
+            printf("DEBUG [%02d]: state 1 -> 0\n", dest_id);
         }
 
         My_node->state[dest_id] = 0;
         
         if(My_node->dist[dest_id] != INF){
             //we got a route to dest_id, so spreed it
-            return_code = Route_neighbors(dest_id, -1, My_node);
+            return_code = Route_neighbors(dest_id, My_node);
             if(return_code != 0) return return_code;
         }//else //we didnt get a route to dest_id there is no way available to dest_id
 

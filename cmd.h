@@ -26,4 +26,8 @@ int cmd_leave(Node_info* My_node);
 
 int cmd_remove_edge(char* id_to_remove, Node_info* My_node);
 
+int cmd_direct_join(char* net_as_char, char* id_as_char, Node_info* My_node);
+
+int cmd_direct_add_edge(char* dest_id_as_char, char* idIP, char* idTCP, Node_info* My_node);
+
 #endif

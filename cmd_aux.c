@@ -286,6 +286,7 @@ void reset_My_node(Node_info* My_node){
 
     My_node->is_in_net = false;
     My_node->is_monitoring = false;
+    My_node->was_direct_added = false;
     My_node->unique_tid = 0;
 
     return;

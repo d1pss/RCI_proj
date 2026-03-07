@@ -61,6 +61,7 @@ typedef struct _Node_information{
     //flags
     bool is_in_net;
     bool is_monitoring;
+    bool was_direct_added;
     bool debug;
     bool adv_debug;
 }Node_info;

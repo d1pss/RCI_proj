@@ -12,7 +12,7 @@ int get_id_info(char* id_IP ,char* id_Port ,bool* get_id_info ,char* net, char* 
 
 int max(int a, int b);
 
-void print_help(void);
+int print_help(void);
 
 int Check_argv_format(char** argv, int argc);
 

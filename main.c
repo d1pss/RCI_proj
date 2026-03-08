@@ -72,48 +72,6 @@ int main(int argc, char *argv[]){
                 }
             } 
             if(My_node->is_in_net){
-                if(FD_ISSET(My_node->TCP_fd[My_node->id],&fdset)){
-                    //A client is trying to connect need to accept
-                    return_code = accept_TCP_connection(My_node);
-                    if(manage_return_code(return_code, My_node) == 1) return 0;
-
-                }
-
-                for(i = 0; i < My_node->number_pending_fd; i++){
-                    if(My_node->TCP_pending_fd[i] == -1) break;
-                    if(FD_ISSET(My_node->TCP_pending_fd[i],&fdset)){
-                        //reciving NEIGHBOR message
-
-                        return_code = Recive_message_from_fd(TCP_buffer, i, -1, My_node->TCP_pending_fd[i], My_node);
-
-                        //TCP connection was closed by the other side
-                        if(return_code == 7){
-                            close(My_node->TCP_pending_fd[i]);
-                            remove_pending_fd(i, My_node);
-                            continue;
-                        }
-
-                        if(manage_return_code(return_code, My_node) == 1) return 0;
-
-                        return_code = fragment_buffer(TCP_buffer, &fragmented_input, &n_of_frag_inputs);
-                        if(manage_return_code(return_code, My_node) == 1) return 0;
-
-                        return_code = process_NEIGHBOR_message(fragmented_input[0], My_node->TCP_pending_fd[i], &NEIGHBOR_id, My_node);
-                        if(manage_return_code(return_code, My_node) == 1) return 0;
-                        
-                        remove_pending_fd(i, My_node);
-                        if(My_node->TCP_pending_fd[i] != -1){
-                            i--;
-                        }
-
-                        for(j = 1; j < n_of_frag_inputs; j++){
-                            return_code = process_TCP_message(fragmented_input[j], NEIGHBOR_id, My_node);
-                            if(manage_return_code(return_code, My_node) == 1) return 0;
-                        }
-                        
-                        free_frag_buffer(fragmented_input, n_of_frag_inputs);
-                    }
-                }
 
                 for(i = 0; i < Number_of_ids; i++){
                     if(My_node->TCP_fd[i] != -1 && (i != My_node->id)){
@@ -148,6 +106,50 @@ int main(int argc, char *argv[]){
                         }
                         
                     }
+                }
+
+                for(i = 0; i < My_node->number_pending_fd; i++){
+                    if(My_node->TCP_pending_fd[i] == -1) break;
+                    if(FD_ISSET(My_node->TCP_pending_fd[i],&fdset)){
+                        //reciving NEIGHBOR message
+
+                        return_code = Recive_message_from_fd(TCP_buffer, i, -1, My_node->TCP_pending_fd[i], My_node);
+
+                        //TCP connection was closed by the other side
+                        if(return_code == 7){
+                            close(My_node->TCP_pending_fd[i]);
+                            remove_pending_fd(i, My_node);
+                            continue;
+                        }
+
+                        if(manage_return_code(return_code, My_node) == 1) return 0;
+
+                        return_code = fragment_buffer(TCP_buffer, &fragmented_input, &n_of_frag_inputs);
+                        if(manage_return_code(return_code, My_node) == 1) return 0;
+
+                        return_code = process_NEIGHBOR_message(fragmented_input[0], My_node->TCP_pending_fd[i], &NEIGHBOR_id, My_node);
+                        if(manage_return_code(return_code, My_node) == 1) return 0;
+                        
+                        remove_pending_fd(i, My_node);
+                        My_node->number_pending_fd--;
+                        if(My_node->TCP_pending_fd[i] != -1){
+                            i--;
+                        }
+
+                        for(j = 1; j < n_of_frag_inputs; j++){
+                            return_code = process_TCP_message(fragmented_input[j], NEIGHBOR_id, My_node);
+                            if(manage_return_code(return_code, My_node) == 1) return 0;
+                        }
+                        
+                        free_frag_buffer(fragmented_input, n_of_frag_inputs);
+                    }
+                }
+
+                if(FD_ISSET(My_node->TCP_fd[My_node->id],&fdset)){
+                    //A client is trying to connect need to accept
+                    return_code = accept_TCP_connection(My_node);
+                    if(manage_return_code(return_code, My_node) == 1) return 0;
+
                 }
 
             }

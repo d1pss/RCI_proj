@@ -6,12 +6,19 @@ int Create_TCP_Server(Node_info* My_node){
     int errcode;
     ssize_t n;
     struct addrinfo hints,*res;
+    //int opt = 1;
 
     My_node->TCP_fd[My_node->id]=socket(AF_INET,SOCK_STREAM,0); //TCP socket
     if (My_node->TCP_fd[My_node->id]==-1){
         printf("TCP error (in Create_TCP_Server) socket\n");
         return 5;
     }
+
+    /*//Enable SO_REUSEADDR to allow immediate rebinding to the port after leave
+    if (setsockopt(My_node->TCP_fd[My_node->id], SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+        printf("TCP error (in Create_TCP_Server) setsockopt\n");
+        return 5;
+    }*/
 
     memset(&hints,0,sizeof hints);
     hints.ai_family=AF_INET; //IPv4
@@ -66,7 +73,7 @@ int accept_TCP_connection(Node_info* My_node){
 
 int Create_and_Connect_TCP_client(char* dest_IP, char* dest_Port, int dest_id, Node_info* My_node){
     int return_code;
-    uint16_t uint16_Port = (uint16_t)atoi(dest_Port);
+    struct addrinfo hints,*res;  
 
     My_node->TCP_fd[dest_id]=socket(AF_INET,SOCK_STREAM,0); //TCP socket
     if (My_node->TCP_fd[dest_id]==-1){
@@ -74,22 +81,27 @@ int Create_and_Connect_TCP_client(char* dest_IP, char* dest_Port, int dest_id, N
         return 5;
     }  
 
+    memset(&hints,0,sizeof hints);
+    hints.ai_family=AF_INET; //IPv4
+    hints.ai_socktype=SOCK_STREAM; //TCP socket
 
-    struct sockaddr_in addr;
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(uint16_Port);
-    
-    if(inet_pton(AF_INET, dest_IP, &addr.sin_addr)<= 0) {
-        printf("TCP error (in Create_and_Connect_TCP_client) inet_pton\n");
+    if(getaddrinfo(dest_IP, dest_Port, &hints, &res) != 0){
+        printf("TCP error (in Create_and_Connect_TCP_client) getaddrinfo\n");
         close(My_node->TCP_fd[dest_id]);
+        My_node->TCP_fd[dest_id] = -1;
         return 5;
     }
 
-    if(connect(My_node->TCP_fd[dest_id], (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-        printf("TCP error (in Create_and_Connect_TCP_client) connect\n");
+
+    if(connect(My_node->TCP_fd[dest_id], res->ai_addr, res->ai_addrlen) < 0) {
+        perror("TCP error (in Create_and_Connect_TCP_client) connect"); 
+        freeaddrinfo(res); // Libertar memória antes de sair
         close(My_node->TCP_fd[dest_id]);
+        My_node->TCP_fd[dest_id] = -1;
         return 5;
     }
+
+    freeaddrinfo(res);
 
     if(My_node->debug){
         printf("Created and Connected TCP client in %02d to %02d\n", My_node->id, dest_id);

@@ -21,7 +21,7 @@ int Send_COORD(int neighbor_id_to_send, int dest_id, Node_info* My_node){
 
     sprintf(Routing_cmd, "COORD %02d\n", dest_id);
 
-    if(My_node->is_monitoring){
+    if(My_node->is_monitoring || My_node->debug){
         printf("Sending to %02d: %s", neighbor_id_to_send, Routing_cmd);
     }
 
@@ -36,7 +36,7 @@ int Send_UNCOORD(int neighbor_id_to_send, int dest_id, Node_info* My_node){
 
     sprintf(Routing_cmd, "UNCOORD %02d\n", dest_id);
 
-    if(My_node->is_monitoring){
+    if(My_node->is_monitoring || My_node->debug){
         printf("Sending to %02d: %s", neighbor_id_to_send, Routing_cmd);
     }
 
@@ -51,7 +51,7 @@ int Send_ROUTE(int neighbor_id_to_send, int dest_id, Node_info* My_node){
 
     sprintf(Routing_cmd, "ROUTE %02d %d\n", dest_id, My_node->dist[dest_id]);
 
-    if(My_node->is_monitoring){
+    if(My_node->is_monitoring || My_node->debug){
         printf("Sending to %02d: %s", neighbor_id_to_send, Routing_cmd);
     }
 
@@ -119,7 +119,7 @@ int process_TCP_message(char* input, int neigbor_id, Node_info* My_node){
 
             if(sscanf(input, "%*s %d %d", &dest_id, &dist_to_dest_id_from_neighbor) == 2){
 
-                if(My_node->is_monitoring){
+                if(My_node->is_monitoring || My_node->debug){
                     printf("Receiving from %02d: %s", neigbor_id, input);
                 }
 
@@ -135,7 +135,7 @@ int process_TCP_message(char* input, int neigbor_id, Node_info* My_node){
 
             if(sscanf(input, "%*s %d", &dest_id) == 1){
 
-                if(My_node->is_monitoring){
+                if(My_node->is_monitoring || My_node->debug){
                     printf("Receiving from %02d: %s", neigbor_id, input);
                 }
 
@@ -152,7 +152,7 @@ int process_TCP_message(char* input, int neigbor_id, Node_info* My_node){
 
             if(sscanf(input, "%*s %d", &dest_id) == 1){
 
-                if(My_node->is_monitoring){
+                if(My_node->is_monitoring || My_node->debug){
                     printf("Receiving from %02d: %s", neigbor_id, input);
                 }
 

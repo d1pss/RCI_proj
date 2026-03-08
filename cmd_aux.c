@@ -8,6 +8,7 @@ int print_ids(char* response, int net){
     for(int i = 0; i < response_len; i++){
         if(response[i] == '\n'){
             first_id_index = i + 1;
+            break;
         }
     }
     if(first_id_index != 0){
@@ -63,21 +64,14 @@ int add_id_to_net(char* net, char* id, Node_info* My_node){
     if (items_found == 2) {
         if (op == '1') {
             // id sucessfuly registred in network
-            printf("id was sucessfuly registred in network\n");
-
-            
             return 0;
         } else if (op == '2') {
             // Network is full
-            printf("id was not registred in the network because its full\n");
-
-            
+            printf("Server Exchange Error -> Registration Failed: The node server database is full. Cannot join network [%s].\n", net);
             return 7;
         }else{
             //error code from network
-            printf("ERROR: error code (%c) from network using this comand %s\n", op, message);
-
-           
+            printf("Server Exchange Error -> Registration Failed: Server returned error code [op=%c] for command [%s].\n", op, message);
             return 2;
         }
     }else{
@@ -110,7 +104,7 @@ int get_id_info(char* id_IP ,char* id_Port ,bool* get_id_info ,char* net ,char* 
     }
 
     if(tid != tid_read){
-        printf("Recived message with difrent tid lost data\n");
+        printf("Server Exchange Error -> Transaction Mismatch: Received TID does not match the sent TID. Data discarded to prevent corruption.\n");
         return 0;
     }
 
@@ -135,9 +129,7 @@ int get_id_info(char* id_IP ,char* id_Port ,bool* get_id_info ,char* net ,char* 
             return 0;
         }else{
             //error code from network
-            printf("ERROR: error code (%c) from network using this comand %s\n", op, message);
-
-            
+            printf("Server Exchange Error -> Operation Rejected: Server returned error code [op=%c] for command [%s].\n", op, message);
             return 2;
         }
     }else{
@@ -153,21 +145,24 @@ int max(int a, int b){
     return a > b ? a : b;
 }
 
-void print_help(void){
-    printf("join (j) net id . . . . . . . . . . . | register node as (id) in the (net)\n"
-           "show nodes (n) net. . . . . . . . . . | print nodes registred in (net)\n"
-           "leave (l) . . . . . . . . . . . . . . | unregister node\n"
-           "exit (x). . . . . . . . . . . . . . . | exit the program\n"
-           "add edge (ae) id. . . . . . . . . . . | create a TCP chanel between node and destiny (id)\n"
-           "remove edge (re) id . . . . . . . . . | closes the TCP chanel between node and destiny (id)\n"
-           "show neighbors (sg) . . . . . . . . . | print the ids directly connected to the node\n"
-           "announce (a). . . . . . . . . . . . . | announce the node to the other nodes in the network\n"
-           "show routing (sr) dest. . . . . . . . | ---falta escrever---\n"
-           "start monitor (sm). . . . . . . . . . | ---falta escrever---\n"
-           "end monitor (em). . . . . . . . . . . | ---falta escrever---\n"
-           "message (m) dest message. . . . . . . | send (message) to node (dest)\n"
-           "direct join (dj) net id . . . . . . . | ---falta escrever---\n"
-           "direct add edge (dae) id idIP idTCP . | ---falta escrever---\n");
+int print_help(void){
+    printf("|-------------------------------------------------------------------------------------|\n"
+           "|join (j) net id . . . . . . . . . . | Register node as (id) in the network (net)     |\n"
+           "|show nodes (n) net. . . . . . . . . | List all nodes registered in network (net)     |\n"
+           "|leave (l) . . . . . . . . . . . . . | Unregister node and close all active edges     |\n"
+           "|exit (x). . . . . . . . . . . . . . | Safely leave the network and exit program      |\n"
+           "|add edge (ae) id. . . . . . . . . . | Create a TCP session with registered node (id) |\n"
+           "|remove edge (re) id . . . . . . . . | Close the TCP session with neighbor node (id)  |\n"
+           "|show neighbors (sn) . . . . . . . . | List IDs of all directly connected neighbors   |\n"
+           "|announce (a). . . . . . . . . . . . | Advertise node existence to the entire network |\n"
+           "|show routing (sr) dest. . . . . . . | Show routing state/path to (dest)              |\n"
+           "|start monitor (sm). . . . . . . . . | Enable monitoring of protocol message exchange |\n"
+           "|end monitor (em). . . . . . . . . . | Disable monitoring of protocol message exchange|\n"
+           "|message (m) dest msg. . . . . . . . | Send a chat message to destination node (dest) |\n"
+           "|direct join (dj) net id . . . . . . | Join network (net) as (id) without registration|\n"
+           "|direct add edge (dae) id ip port. . | Create a TCP session using specific IP and Port|\n"
+           "|-------------------------------------------------------------------------------------|\n");
+    return 0;
 }
 
 int Check_argv_format(char** argv, int argc){
@@ -251,6 +246,7 @@ Node_info* init_Node(char** argv, int argc){
         return NULL;
     }
 
+    //debug variables
     My_node->debug = true;
     My_node->adv_debug = true;
 

@@ -4,6 +4,23 @@
 #include "server_client_comunication.h"
 #include "routing.h"
 
+/***********************************************************************************************
+ * @brief Main entry point for the OWR Node application.
+ *
+ * Implements an event-driven loop using select() to multiplex between:
+ * 
+ * - 1. User input (Standard Input).
+ * 
+ * - 2. New incoming TCP connection requests (Server Socket).
+ * 
+ * - 3. Pending TCP connections awaiting identification (NEIGHBOR message).
+ * 
+ * - 4. Active neighbor connections (Routing and Chat protocols).
+ *
+ * @param argc Number of command-line arguments.
+ * @param argv Array of command-line argument strings.
+ * @return int Returns 0 on successful termination.
+ ***********************************************************************************************/
 int main(int argc, char *argv[]){
     
     if(Check_argv_format(argv, argc) == 1){

@@ -167,7 +167,7 @@ int Recive_message_from_fd(char* message, int sender_fd, Node_info* My_node){
         message[n] = '\0';
     }else{
         //lost info not suposed to happen if it happends we need bigger buffer
-        printf("SE ISTO IMPRIMIO PERCISAMOS DE UM BUFFER MAIOR\n");
+        printf("Buffer Overflow: Received data exceeded %d bytes. Information may be truncated. Increase TCP_buffer_len.\n", TCP_buffer_len);
         return ERR_UNEXPECTED;
     }
 
@@ -223,7 +223,7 @@ int send_message_to_UDP_server(char* message, char* response, Node_info* My_node
         response[n] = '\0';
     }else{
         //lost info not suposed to happen if it happends we need bigger buffer
-        printf("SE ISTO IMPRIMIO PERCISAMOS DE UM BUFFER MAIOR\n");
+        printf("Buffer Overflow: Received data exceeded %d bytes. Information may be truncated. Increase UDP_response_size.\n", UDP_response_size);
         return ERR_UNEXPECTED;
     }
 
@@ -248,12 +248,12 @@ int select_timeout(int fd){
 
     if (sret == 0) {
         // TIMEOUT
-        printf("Erro: The response took to long to arive or got lost\n");
+        printf("ERROR: The response took to long to arive or got lost\n");
         close(fd);
         return STATUS_SPECIFIC; 
     } else if (sret == -1) {
         // ERRO in select
-        printf("ERROR: select error\n"); 
+        printf("ERROR (UDP select)\n"); 
         close(fd);
         return ERR_UNEXPECTED;
     }

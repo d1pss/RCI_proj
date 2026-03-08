@@ -71,7 +71,7 @@ int main(int argc, char *argv[]){
 
         case UNUSED_FD:
             //error
-            printf("ERROR: select error\n");
+            printf("ERROR (main loop select)\n");
             if(manage_return_code(ERR_UNEXPECTED, My_node) == EXIT_OK) return SUCCESS;
             break;
         

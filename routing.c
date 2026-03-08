@@ -128,7 +128,7 @@ int process_TCP_message(char* input, int neigbor_id, Node_info* My_node){
             }else{
                 //unexpected sscanf return
                 printf("DEBUG ERROR: (in function process_routing_message) if we are reading this the sscanf returned an unexpected number (not suposed to do that)\n");
-                return 6;
+                return ERR_UNEXPECTED;
             }
 
         }else if(!strcmp(Protocol, "COORD")){
@@ -145,7 +145,7 @@ int process_TCP_message(char* input, int neigbor_id, Node_info* My_node){
             }else{
                 //unexpected sscanf return
                 printf("DEBUG ERROR: (in function process_routing_message) if we are reading this the sscanf returned an unexpected number (not suposed to do that)\n");
-                return 6;
+                return ERR_UNEXPECTED;
             }
 
         }else if(!strcmp(Protocol, "UNCOORD")){
@@ -162,7 +162,7 @@ int process_TCP_message(char* input, int neigbor_id, Node_info* My_node){
             }else{
                 //unexpected sscanf return
                 printf("DEBUG ERROR: (in function process_routing_message) if we are reading this the sscanf returned an unexpected number (not suposed to do that)\n");
-                return 6;
+                return ERR_UNEXPECTED;
             }
 
         }else if(!strcmp(Protocol, "CHAT")){
@@ -178,26 +178,26 @@ int process_TCP_message(char* input, int neigbor_id, Node_info* My_node){
             }else{
                 //unexpected sscanf return
                 printf("DEBUG ERROR: (in function process_routing_message) if we are reading this the sscanf returned an unexpected number (not suposed to do that)\n");
-                return 6;
+                return ERR_UNEXPECTED;
             }
 
         }else{
             //unknown protocol
             printf("DEBUG ERROR: (in function process_routing_message) if we are reading this we recived an unknown protocol (not suposed to do that)\n");
-            return 6;
+            return ERR_UNEXPECTED;
         }
 
     }else{
         //unexpected sscanf return
         printf("DEBUG ERROR: (in function process_routing_message) if we are reading this the sscanf returned an unexpected number (not suposed to do that)\n");
-        return 6;
+        return ERR_UNEXPECTED;
     }
-    return 0;
+    return SUCCESS;
 }
 
 int process_ROUTE_message(int dest_id, int dist_to_dest_id_from_neighbor, int neighbor_id, Node_info* My_node){
     if(dest_id == My_node->id){
-        return 0;
+        return SUCCESS;
     }
 
     int new_dist_to_dest_id, return_code;
@@ -222,24 +222,24 @@ int process_ROUTE_message(int dest_id, int dist_to_dest_id_from_neighbor, int ne
         My_node->dist[dest_id] = new_dist_to_dest_id;
         My_node->succ[dest_id] = neighbor_id;
 
-        if((My_node->state[dest_id] == 0)){
+        if((My_node->state[dest_id] == STATE_EXPEDITION)){
             //send new route to neigbors (exept neighbor_id this feture is not in use)
             return_code = Route_neighbors(dest_id, My_node);
-            if(return_code != 0) return return_code;
+            if(return_code != SUCCESS) return return_code;
 
         }//else //need to wait before sending this new route
     }//else //way given is not better that the one we already have
         
-    return 0;
+    return SUCCESS;
 }
 
 int process_COORD_message(int dest_id, int neighbor_id, Node_info* My_node){
     int return_code;
 
-    if(My_node->state[dest_id] == 1){
+    if(My_node->state[dest_id] == STATE_COORDINATION){
 
         return_code = Send_UNCOORD(neighbor_id, dest_id, My_node);
-        if(return_code != 0) return return_code;
+        if(return_code != SUCCESS) return return_code;
 
     }else{
 
@@ -249,30 +249,30 @@ int process_COORD_message(int dest_id, int neighbor_id, Node_info* My_node){
             if (My_node->adv_debug) {
             char dist_to_prt[4], succ_to_print[4];
             My_node->dist[dest_id] == INF ? (void)strcpy(dist_to_prt, "INF") : (void)sprintf(dist_to_prt, "%02d", My_node->dist[dest_id]);
-            My_node->succ[dest_id] == -1  ? (void)strcpy(succ_to_print, "-1")  : (void)sprintf(succ_to_print, "%02d", My_node->succ[dest_id]);
+            My_node->succ[dest_id] == NO_SUCCESSOR  ? (void)strcpy(succ_to_print, "-1")  : (void)sprintf(succ_to_print, "%02d", My_node->succ[dest_id]);
             printf("DEBUG [%02d]: dist %s -> INF | succ %s -> -1 | state 0 -> 1\n", dest_id, dist_to_prt, succ_to_print);
             }
 
             My_node->dist[dest_id] = INF;
-            My_node->succ[dest_id] = -1;
-            My_node->state[dest_id] = 1;
+            My_node->succ[dest_id] = NO_SUCCESSOR;
+            My_node->state[dest_id] = STATE_COORDINATION;
             My_node->succ_coord[dest_id] = neighbor_id;
 
             return_code = Coord_neighbors(dest_id, My_node);
-            if(return_code != 0) return return_code;
+            if(return_code != SUCCESS) return return_code;
 
         }else{
             //i dont depend on neighbor_id to get to dest_id, so send Route to neighbor_id
 
             return_code = Send_ROUTE(neighbor_id, dest_id, My_node);
-            if(return_code != 0) return return_code;
+            if(return_code != SUCCESS) return return_code;
 
             return_code = Send_UNCOORD(neighbor_id, dest_id, My_node);
-            if(return_code != 0) return return_code;
+            if(return_code != SUCCESS) return return_code;
 
         }
     }
-    return 0;
+    return SUCCESS;
 }
 
 int process_UNCOORD_message(int dest_id, int neighbor_id, Node_info* My_node){
@@ -287,23 +287,23 @@ int process_UNCOORD_message(int dest_id, int neighbor_id, Node_info* My_node){
             printf("DEBUG [%02d]: state 1 -> 0\n", dest_id);
         }
 
-        My_node->state[dest_id] = 0;
+        My_node->state[dest_id] = STATE_EXPEDITION;
         
         if(My_node->dist[dest_id] != INF){
             //we got a route to dest_id, so spreed it
             return_code = Route_neighbors(dest_id, My_node);
-            if(return_code != 0) return return_code;
+            if(return_code != SUCCESS) return return_code;
         }//else //we didnt get a route to dest_id there is no way available to dest_id
 
-        if(My_node->succ_coord[dest_id] != -1){
+        if(My_node->succ_coord[dest_id] != NO_SUCCESSOR){
             return_code = Send_UNCOORD(My_node->succ_coord[dest_id], dest_id, My_node);
-            if(return_code != 0) return return_code;
-            My_node->succ_coord[dest_id] = -1;
+            if(return_code != SUCCESS) return return_code;
+            My_node->succ_coord[dest_id] = NO_SUCCESSOR;
         }
 
     }//else //still whating on all coords to respond
 
-    return 0;
+    return SUCCESS;
 }
 
 int process_CHAT_message(char* Chat_protocol, int dest_id, Node_info* My_node){
@@ -316,30 +316,31 @@ int process_CHAT_message(char* Chat_protocol, int dest_id, Node_info* My_node){
 
             printf("Recived message from %d\n%s\n", origin_id, chat_message);
 
-            return 0;
+            return SUCCESS;
         }else{
             //unexpected sscanf return
             printf("DEBUG ERROR: (in function process_CHAT_message) if we are reading this the sscanf returned an unexpected number (not suposed to do that)\n");
-            return 6;
+            return ERR_UNEXPECTED;
         }
     }
 
-    if(My_node->state[dest_id] == 1 || My_node->succ[dest_id] == -1){
+    if(My_node->state[dest_id] == STATE_COORDINATION || My_node->succ[dest_id] == NO_SUCCESSOR){
         printf("Cannot forward chat_message: Destination %d is unreachable or coordinating.\n", dest_id);
-        return 0; // lose message
+        return SUCCESS; // lose message
     }
 
     return_code = Send_chat_protocol_to_id(Chat_protocol, My_node->succ[dest_id], My_node);
-    if(return_code != 0) return return_code;
+    if(return_code != SUCCESS) return return_code;
 
-    return 0;
+    return SUCCESS;
 }
 
 int process_NEIGHBOR_message(char* Routing_protocol, int newfd, int *sender_id, Node_info* My_node){
     int return_code;
 
     if(sscanf(Routing_protocol, "%*s %d", sender_id) != 1){
-        return 6;
+        printf("DEBUG ERROR: (in function process_NEIGHBOR_message) if we are reading this the sscanf returned an unexpected number (not suposed to do that)\n");
+        return ERR_UNEXPECTED;
     }
 
     if(My_node->debug){
@@ -351,12 +352,12 @@ int process_NEIGHBOR_message(char* Routing_protocol, int newfd, int *sender_id, 
     My_node->number_of_TCP_channels++;
 
     for(int i = 0; i < Number_of_ids; i++){
-        if((My_node->dist[i] < INF && My_node->state[i] == 0)){
+        if((My_node->dist[i] < INF && My_node->state[i] == STATE_EXPEDITION)){
             return_code = Send_ROUTE((*sender_id), i, My_node);
-            if(return_code != 0) return return_code;
+            if(return_code != SUCCESS) return return_code;
         }
     }
 
-    return 0;
+    return SUCCESS;
 
 }

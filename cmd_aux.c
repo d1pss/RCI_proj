@@ -19,21 +19,20 @@ int print_ids(char* response, int net){
                 id_to_print[1] = response[i+1];
                 printf("%s\n", id_to_print);
             }
-            return 0;
+            return SUCCESS;
         }else{
             // there is no nodes in the network
             printf("There are no Nodes in the network %d to show.\n", net);
-            return 0;
+            return SUCCESS;
         }
     }else{
         //response is not as expected
         printf("DEBUG ERROR: (in function print_ids) if we are reading this the server sent a bad formated response (not suposed to do that)\n");
         
-        return 6;
+        return ERR_UNEXPECTED;
     }
 }
 
-//return 7 means the net is full
 int add_id_to_net(char* net, char* id, Node_info* My_node){
     char message[UDP_message_len], response[UDP_response_size], op_str[2], op;
     int return_code, tid, tid_read;
@@ -44,7 +43,7 @@ int add_id_to_net(char* net, char* id, Node_info* My_node){
 
     return_code = send_message_to_UDP_server(message, response, My_node);
 
-    if(return_code != 0){
+    if(return_code != SUCCESS){
         return return_code;
     }
 
@@ -52,7 +51,7 @@ int add_id_to_net(char* net, char* id, Node_info* My_node){
 
     if(tid != tid_read){
         printf("Recived message with difrent tid lost data\n");
-        return 0;
+        return SUCCESS;
     }
 
     op = op_str[0];
@@ -64,21 +63,21 @@ int add_id_to_net(char* net, char* id, Node_info* My_node){
     if (items_found == 2) {
         if (op == '1') {
             // id sucessfuly registred in network
-            return 0;
+            return SUCCESS;
         } else if (op == '2') {
             // Network is full
             printf("Server Exchange Error -> Registration Failed: The node server database is full. Cannot join network [%s].\n", net);
-            return 7;
+            return STATUS_SPECIFIC;
         }else{
             //error code from network
             printf("Server Exchange Error -> Registration Failed: Server returned error code [op=%c] for command [%s].\n", op, message);
-            return 2;
+            return ERR_NET_LOGIC;
         }
     }else{
         //response is not as expected
         printf("DEBUG ERROR: (in function add_id_to_net) if we are reading this the server sent a bad formated response (not suposed to do that)\n");
         
-        return 6;
+        return ERR_UNEXPECTED;
     }
 }
 
@@ -93,7 +92,7 @@ int get_id_info(char* id_IP ,char* id_Port ,bool* get_id_info ,char* net ,char* 
 
     return_code = send_message_to_UDP_server(message, response, My_node);
 
-    if(return_code != 0){
+    if(return_code != SUCCESS){
         return return_code;
     }
 
@@ -105,7 +104,7 @@ int get_id_info(char* id_IP ,char* id_Port ,bool* get_id_info ,char* net ,char* 
 
     if(tid != tid_read){
         printf("Server Exchange Error -> Transaction Mismatch: Received TID does not match the sent TID. Data discarded to prevent corruption.\n");
-        return 0;
+        return SUCCESS;
     }
 
     if(My_node->debug){
@@ -120,29 +119,24 @@ int get_id_info(char* id_IP ,char* id_Port ,bool* get_id_info ,char* net ,char* 
             *get_id_info = true;
 
             
-            return 0;
+            return SUCCESS;
         } else if (op == '2') {
             // ID does not exist in net
             *get_id_info = false;
 
            
-            return 0;
+            return SUCCESS;
         }else{
             //error code from network
             printf("Server Exchange Error -> Operation Rejected: Server returned error code [op=%c] for command [%s].\n", op, message);
-            return 2;
+            return ERR_NET_LOGIC;
         }
     }else{
         //response is not as expected
         printf("DEBUG ERROR: (in function get_id_info) if we are reading this the server sent a bad formated response (not suposed to do that)\n");
         
-        return 6;
+        return ERR_UNEXPECTED;
     }
-}
-
-
-int max(int a, int b){
-    return a > b ? a : b;
 }
 
 int print_help(void){
@@ -162,43 +156,12 @@ int print_help(void){
            "|direct join (dj) net id . . . . . . | Join network (net) as (id) without registration|\n"
            "|direct add edge (dae) id ip port. . | Create a TCP session using specific IP and Port|\n"
            "|-------------------------------------------------------------------------------------|\n");
-    return 0;
+    return SUCCESS;
 }
 
-int Check_argv_format(char** argv, int argc){
-    if(argc == 5){
-        if(is_IP_invalid(argv[1])){
-            printf("IP used in ./OWR --> IP <-- TCP regIP regUDP does not folow the standard IPv4 structure\n");
-            return 1;
-        }
-        if(is_Port_invalid(argv[2])){
-            printf("TCP Port used in ./OWR IP --> TCP <-- regIP regUDP does not folow the standard Port structure\n");
-            return 1;
-        }
-        if(is_IP_invalid(argv[3])){
-            printf("regIP used in ./OWR IP TCP --> regIP <-- regUDP does not folow the standard IPv4 structure\n");
-            return 1;
-        }
-        if(is_Port_invalid(argv[4])){
-            printf("UDP Port used in ./OWR IP TCP regIP --> regUDP <-- does not folow the standard Port structure\n");
-            return 1;
-        }
-    }else if(argc == 3){
-        if(is_IP_invalid(argv[1])){
-            printf("IP used in ./OWR --> IP <-- TCP does not folow the standard IPv4 structure\n");
-            return 1;
-        }
-        if(is_Port_invalid(argv[2])){
-            printf("TCP Port used in ./OWR IP --> TCP <-- does not folow the standard Port structure\n");
-            return 1;
-        }
-    }else{
-        printf("Comand format is incorrect.\nUsage: ./OWR IP TCP regIP regUDP\n");
-        return 1;
-    }
 
-    return 0;
-}
+/********************************************************************************* -----check that is valid funcs----- *********************************************************************************/
+
 
 bool is_IP_invalid(char* IP){
     int a, b, c, d;
@@ -237,6 +200,70 @@ bool is_Port_invalid(char* Port){
     if (p < 1 || p > 65535) return true;
 
     return false;
+}
+
+bool is_string_a_number(char* string){
+    char* endptr;
+    // Convert string to long, endptr stores the end conversion point
+    (void)strtol(string, &endptr, 10);
+
+    // if *endptr is not \0, there was thrash in the sring
+    if (string == endptr || *endptr != '\0') return false;
+
+
+
+    return true;
+}
+
+int get_unique_tid(Node_info* My_node){
+    if(My_node->unique_tid == 1000){
+        My_node->unique_tid = 0;
+    }
+    My_node->unique_tid++;
+    return My_node->unique_tid - 1;
+}
+
+
+/********************************************************************************* -----Main aux funcs----- *********************************************************************************/
+
+
+int max(int a, int b){
+    return a > b ? a : b;
+}
+
+int Check_argv_format(char** argv, int argc){
+    if(argc == 5){
+        if(is_IP_invalid(argv[1])){
+            printf("IP used in ./OWR --> IP <-- TCP regIP regUDP does not folow the standard IPv4 structure\n");
+            return EXIT_OK;
+        }
+        if(is_Port_invalid(argv[2])){
+            printf("TCP Port used in ./OWR IP --> TCP <-- regIP regUDP does not folow the standard Port structure\n");
+            return EXIT_OK;
+        }
+        if(is_IP_invalid(argv[3])){
+            printf("regIP used in ./OWR IP TCP --> regIP <-- regUDP does not folow the standard IPv4 structure\n");
+            return EXIT_OK;
+        }
+        if(is_Port_invalid(argv[4])){
+            printf("UDP Port used in ./OWR IP TCP regIP --> regUDP <-- does not folow the standard Port structure\n");
+            return EXIT_OK;
+        }
+    }else if(argc == 3){
+        if(is_IP_invalid(argv[1])){
+            printf("IP used in ./OWR --> IP <-- TCP does not folow the standard IPv4 structure\n");
+            return EXIT_OK;
+        }
+        if(is_Port_invalid(argv[2])){
+            printf("TCP Port used in ./OWR IP --> TCP <-- does not folow the standard Port structure\n");
+            return EXIT_OK;
+        }
+    }else{
+        printf("Comand format is incorrect.\nUsage: ./OWR IP TCP regIP regUDP\n");
+        return EXIT_OK;
+    }
+
+    return SUCCESS;
 }
 
 Node_info* init_Node(char** argv, int argc){
@@ -288,34 +315,19 @@ void reset_My_node(Node_info* My_node){
     return;
 }
 
-bool is_string_a_number(char* string){
-    char* endptr;
-    // Convert string to long, endptr stores the end conversion point
-    (void)strtol(string, &endptr, 10);
-
-    // if *endptr is not \0, there was thrash in the sring
-    if (string == endptr || *endptr != '\0') return false;
-
-
-
-    return true;
-}
-
-//return 0 continue program
-//return 1 exit program
 int manage_return_code(int return_code, Node_info* My_node){
-    if(return_code == 0 || return_code == 3){
-        return 0;
+    if(return_code == SUCCESS || return_code == ERR_INPUT){
+        return SUCCESS;
     }
 
-    if(return_code == 1 || return_code == 4 || return_code == 5 || return_code == 6){
+    if(return_code == EXIT_OK || return_code == ERR_MEMORY || return_code == ERR_SOCKET_IO || return_code == ERR_UNEXPECTED){
         if(My_node->debug){
             printf("exiting whith error code %d\n", return_code);
         }
         if(My_node->is_in_net){
             (void)cmd_leave(My_node);
         }
-        return 1;
+        return EXIT_OK;
     }
 
     char response;
@@ -323,16 +335,16 @@ int manage_return_code(int return_code, Node_info* My_node){
     printf("do you wish to proced with the program?\n[y/n]\n");
     if(scanf("%c", &response) == 1){
         if(response == 'n'){
-        return 1;
+            return EXIT_OK;
         }else if(response == 'y'){
-            return 0;
+            return SUCCESS;
         }else{
             printf("unknown response exting...\n");
-            return 1;
+            return EXIT_OK;
         }
     }
     printf("unknown response exting...\n");
-    return 1;
+    return EXIT_OK;
 
 }
 
@@ -346,18 +358,10 @@ void remove_pending_fd(int index_to_remove, Node_info* My_node){
     } 
 }
 
-int get_unique_tid(Node_info* My_node){
-    if(My_node->unique_tid == 1000){
-        My_node->unique_tid = 0;
-    }
-    My_node->unique_tid++;
-    return My_node->unique_tid - 1;
-}
-
 int fragment_buffer(char* buffer, char*** frag_buffer, int* n_frags){
     if(buffer == NULL || buffer[0] == '\0'){
         printf("DEBUG ERROR: (in function fragment_buffer) buffer is empy or points to NULL");
-        return 6;
+        return ERR_UNEXPECTED;
     }
 
     (*n_frags) = 0;
@@ -371,14 +375,14 @@ int fragment_buffer(char* buffer, char*** frag_buffer, int* n_frags){
     }
 
     (*frag_buffer) = (char**)malloc((*n_frags) * sizeof(char*));
-    if((*frag_buffer) == NULL) return 4;
+    if((*frag_buffer) == NULL) return ERR_MEMORY;
 
     for(int i = 0; i < buffer_len; i++){
         curr_frag_len++;
         if(buffer[i] == '\n'){
 
             (*frag_buffer)[curr_frag] = (char*)malloc((curr_frag_len + 1) * sizeof(char));
-            if((*frag_buffer)[curr_frag] == NULL) return 4;
+            if((*frag_buffer)[curr_frag] == NULL) return ERR_MEMORY;
 
             for(int k = 0; k < curr_frag_len; k++){
                 (*frag_buffer)[curr_frag][k] = buffer[curr_frag_strt_indx + k];
@@ -391,7 +395,7 @@ int fragment_buffer(char* buffer, char*** frag_buffer, int* n_frags){
             curr_frag++;
         }
     }
-    return 0;
+    return SUCCESS;
 }
 
 void free_frag_buffer(char** buffer, int n_frags){

@@ -22,16 +22,11 @@ int process_command(char *input, Node_info* My_node){
 
         }else if(!strcmp(cmd, "x")){
 
-            //in case we forget to leave before exiting
-            if(My_node->is_in_net){
-                //the node is in the network, so leave
-                //cmd_leave();
-            }
-
-            //return to main to exit the program without errors
-            return 1;
+            return cmd_exit(My_node);
 
         }else if(!strcmp(cmd, "sg")){
+
+            return cmd_show_neighbors(My_node);
 
         }else if(!strcmp(cmd, "a")){
 
@@ -559,24 +554,44 @@ int cmd_direct_add_edge(char* dest_id_as_char, char* idIP, char* idTCP, Node_inf
 }
 
 int cmd_exit(Node_info* My_node){
+    int return_code;
+
+    if(My_node->is_in_net){
+        return_code = cmd_leave(My_node);
+        if(return_code != SUCCESS) return return_code;
+    }
     
-    return 1;
+    printf("Exiting...\n");
+
+    return EXIT_OK;
 
 }
 
 int cmd_show_neighbors(Node_info* My_node){
-    char message[Max_message_len], *response, op, neigbours[Number_of_ids][Id_len];
-    int n_neighbours, i;
+    char neigbours[Number_of_ids][Id_len];
+
+    if (!My_node->is_in_net){
+        printf("Interface Command -> Operation denied: Node must be in a network to perform this action. Run (j/dj) first or type 'help' for the full command list.\n");
+        return SUCCESS;
+    }
+
+    if(My_node->number_of_TCP_channels == 0){
+        printf("Show neighbors: The Node has no neighbors\n");
+        return SUCCESS;
+    }
+
+    printf("Show neighbors: Neighbor list below\n");
     
-    //loop para verificar quantos vizinhos tem e quais são...
-     for(i = 0, n_con = 0; i < Number_of_ids; i++){
-                if(My_node->TCP_fd[i] != -1){
-                    if(i =! atoi(My_node->id)){
-                        sprintf(neigbours[n_con], "%02d", i);
-                        n_con++;
-                    }
-                    if(n_con == My_node->number_of_TCP_chanels) break;
-                }
+    //loop para imprimir os vizinho
+     for(int i = 0, n_con = 0; i < Number_of_ids; i++){
+        if(My_node->TCP_fd[i] != -1){
+            if(i =! atoi(My_node->id)){
+                printf("%02d\n", i);
+                n_con++;
             }
-    return 0;
+        }
+        if(n_con == My_node->number_of_TCP_channels) break;
+    }
+
+    return SUCCESS;
 }

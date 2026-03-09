@@ -104,4 +104,20 @@ int cmd_direct_join(char* net_as_char, char* id_as_char, Node_info* My_node);
  ***********************************************************************************************/
 int cmd_direct_add_edge(char* dest_id_as_char, char* idIP, char* idTCP, Node_info* My_node);
 
+/***********************************************************************************************
+ * @brief Safely disconnects the node from the network and prepares the program to exit.
+ * * Checks if the node is registered and calls cmd_leave to unregister and close connections.
+ * @param My_node Pointer to the global node information structure.
+ * @return (int) 1 on successful exit, or error code from cmd_leave.
+ ***********************************************************************************************/
+int cmd_exit(Node_info* My_node);
+
+/***********************************************************************************************
+ * @brief Displays the IDs of all nodes directly connected via a TCP session.
+ * * Iterates through the TCP file descriptor array to list active neighbors.
+ * @param My_node Pointer to the global node information structure.
+ * @return (int) Always 0.
+ ***********************************************************************************************/
+int cmd_show_neighbors(Node_info* My_node);
+
 #endif

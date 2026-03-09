@@ -557,3 +557,26 @@ int cmd_direct_add_edge(char* dest_id_as_char, char* idIP, char* idTCP, Node_inf
 
     return SUCCESS;
 }
+
+int cmd_exit(Node_info* My_node){
+    
+    return 1;
+
+}
+
+int cmd_show_neighbors(Node_info* My_node){
+    char message[Max_message_len], *response, op, neigbours[Number_of_ids][Id_len];
+    int n_neighbours, i;
+    
+    //loop para verificar quantos vizinhos tem e quais são...
+     for(i = 0, n_con = 0; i < Number_of_ids; i++){
+                if(My_node->TCP_fd[i] != -1){
+                    if(i =! atoi(My_node->id)){
+                        sprintf(neigbours[n_con], "%02d", i);
+                        n_con++;
+                    }
+                    if(n_con == My_node->number_of_TCP_chanels) break;
+                }
+            }
+    return 0;
+}

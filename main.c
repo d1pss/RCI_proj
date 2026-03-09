@@ -69,7 +69,7 @@ int main(int argc, char *argv[]){
             //timeout
             break;
 
-        case UNUSED_FD:
+        case -1:
             //error
             printf("ERROR (main loop select)\n");
             if(manage_return_code(ERR_UNEXPECTED, My_node) == EXIT_OK) return SUCCESS;

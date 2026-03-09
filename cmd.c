@@ -433,7 +433,7 @@ int cmd_remove_edge(char* id_to_remove_as_char, Node_info* My_node){
 
     int id_to_remove = atoi(id_to_remove_as_char);
 
-    if(My_node->succ[id_to_remove] != id_to_remove){
+    if(My_node->TCP_fd[id_to_remove] == UNUSED_FD){
         printf("The id given to remove is not our neighbor.\n");
         return SUCCESS;
     }
@@ -583,7 +583,7 @@ int cmd_show_neighbors(Node_info* My_node){
     //loop para imprimir os vizinho
      for(int i = 0, n_con = 0; i < Number_of_ids; i++){
         if(My_node->TCP_fd[i] != -1){
-            if((i =! My_node->id)){
+            if((i != My_node->id)){
                 printf("%02d\n", i);
                 n_con++;
             }

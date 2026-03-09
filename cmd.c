@@ -568,8 +568,6 @@ int cmd_exit(Node_info* My_node){
 }
 
 int cmd_show_neighbors(Node_info* My_node){
-    char neigbours[Number_of_ids][Id_len];
-
     if (!My_node->is_in_net){
         printf("Interface Command -> Operation denied: Node must be in a network to perform this action. Run (j/dj) first or type 'help' for the full command list.\n");
         return SUCCESS;
@@ -585,7 +583,7 @@ int cmd_show_neighbors(Node_info* My_node){
     //loop para imprimir os vizinho
      for(int i = 0, n_con = 0; i < Number_of_ids; i++){
         if(My_node->TCP_fd[i] != -1){
-            if(i =! atoi(My_node->id)){
+            if((i =! My_node->id)){
                 printf("%02d\n", i);
                 n_con++;
             }

@@ -1,5 +1,7 @@
 #include "cmd_aux.h"
 
+/********************************************************************************* -----cmd aux funcs----- *********************************************************************************/
+
 int print_ids(char* response, int net){
 
     int first_id_index = 0, response_len = strlen(response);
@@ -71,6 +73,7 @@ int add_id_to_net(char* net, char* id, Node_info* My_node){
         }else{
             //error code from network
             printf("Server Exchange Error -> Registration Failed: Server returned error code [op=%c] for command [%s].\n", op, message);
+            printf("This error could also mean that The id chosen is already registered in network. Please try a difrent identifier.\n");
             return ERR_NET_LOGIC;
         }
     }else{
@@ -117,15 +120,13 @@ int get_id_info(char* id_IP ,char* id_Port ,bool* get_id_info ,char* net ,char* 
         if (op == '1') {
             // ID exists in net
             *get_id_info = true;
-
-            
             return SUCCESS;
+
         } else if (op == '2') {
             // ID does not exist in net
             *get_id_info = false;
-
-           
             return SUCCESS;
+
         }else{
             //error code from network
             printf("Server Exchange Error -> Operation Rejected: Server returned error code [op=%c] for command [%s].\n", op, message);

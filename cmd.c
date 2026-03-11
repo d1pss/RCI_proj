@@ -1,7 +1,5 @@
 #include "cmd.h"
 
-
-
 int process_command(char *input, Node_info* My_node){
     char arguments[cmd_arguments][cmd_len], cmd[cmd_len], chat_message[TCP_Chat_protocol_len];
     int num_args;
@@ -207,7 +205,6 @@ int cmd_show_routing(char* dest_id_as_char, Node_info* My_node){
 
 int cmd_join(char* net_as_char, char* id_as_char, Node_info* My_node){
     int return_code;
-    bool does_id_exist;
 
     if(!is_string_a_number(net_as_char) || atoi(net_as_char) > 999 || atoi(net_as_char) < 0){
         printf("Interface Command -> Error Invalid Argument: net -> '%s'. Must be a numeric value between 000 and 999.\n", net_as_char);
@@ -223,10 +220,15 @@ int cmd_join(char* net_as_char, char* id_as_char, Node_info* My_node){
 
     if(My_node->is_in_net){
         //no need to join node is already in th network
-        printf("Interface Command -> Operation denied: Connection already established as Node [%02d]. Use 'leave' (l) before joining another network.\n", My_node->id);
+        printf("Interface Command -> Operation denied: Connection already established as Node [%02d] to net[%03d]. Use 'leave' (l) before joining another network.\n", My_node->id, My_node->net);
         return SUCCESS;
     }
 
+    /*
+    //Old section of code to check if id exists whith contact
+
+    bool does_id_exist;
+    
     return_code = get_id_info(NULL, NULL, &does_id_exist ,net_as_char, id_as_char, My_node);
 
     if(return_code != SUCCESS){
@@ -238,6 +240,7 @@ int cmd_join(char* net_as_char, char* id_as_char, Node_info* My_node){
         printf("Interface Command -> Operation denied: The ID [%02d] is already registered in network [%03d]. Please choose a unique identifier.\n", id, net);
         return SUCCESS;
     }
+    */
 
     return_code = add_id_to_net(net_as_char, id_as_char, My_node);
 
@@ -423,18 +426,18 @@ int cmd_remove_edge(char* id_to_remove_as_char, Node_info* My_node){
     int i;
     if(!is_string_a_number(id_to_remove_as_char) || atoi(id_to_remove_as_char) > 99 || atoi(id_to_remove_as_char) < 0){
         //error id value should be between 99 and 00
-        printf("ERROR: input argument id should be a number between 00 and 99\n");
+        printf("Interface Command -> Error Invalid Argument: id -> '%s'. Must be a numeric value between 00 and 99.\n", id_to_remove_as_char);
         return ERR_INPUT;
     }
     if(!My_node->is_in_net){
-        printf("The node is not in the network.\n");
+        printf("Interface Command -> Operation denied: Node must be in a network to perform this action. Run (j/dj) first or type 'help' for the full command list.\n");
         return SUCCESS;
     }  
 
     int id_to_remove = atoi(id_to_remove_as_char);
 
     if(My_node->TCP_fd[id_to_remove] == UNUSED_FD){
-        printf("The id given to remove is not our neighbor.\n");
+        printf("Interface Command -> Operation denied: Node [%02d] is not a direct neighbor of [%02d].\n", My_node->id, id_to_remove);
         return SUCCESS;
     }
 
@@ -479,13 +482,13 @@ int cmd_direct_join(char* net_as_char, char* id_as_char, Node_info* My_node){
 
     if(!is_string_a_number(net_as_char) || atoi(net_as_char) > 999 || atoi(net_as_char) < 0){
         //error net value should be between 999 and 000
-        printf("ERROR: input argument net should be a number between 000 and 999\n");
+        printf("Interface Command -> Error Invalid Argument: net -> '%s'. Must be a numeric value between 000 and 999.\n", net_as_char);
         return ERR_INPUT;
     }
 
     if(!is_string_a_number(id_as_char) || atoi(id_as_char) > 99 || atoi(id_as_char) < 0){
         //error id value should be between 99 and 00
-        printf("ERROR: input argument id should be a number between 00 and 99\n");
+        printf("Interface Command -> Error Invalid Argument: id -> '%s'. Must be a numeric value between 00 and 99.\n", id_as_char);
         return ERR_INPUT;
     }
 
@@ -493,7 +496,7 @@ int cmd_direct_join(char* net_as_char, char* id_as_char, Node_info* My_node){
 
     if(My_node->is_in_net){
         //no need to join node is already in th network
-        printf("Our node is allready in the network, no need to join again\n");
+        printf("Interface Command -> Operation denied: Connection already established as Node [%02d] to net[%03d]. Use 'leave' (l) before joining another network.\n", My_node->id, My_node->net);
         return SUCCESS;
     }
 
@@ -517,29 +520,29 @@ int cmd_direct_join(char* net_as_char, char* id_as_char, Node_info* My_node){
 int cmd_direct_add_edge(char* dest_id_as_char, char* idIP, char* idTCP, Node_info* My_node){
     if(!is_string_a_number(dest_id_as_char) || atoi(dest_id_as_char) > 99 || atoi(dest_id_as_char) < 0){
         //error id value should be between 99 and 00
-        printf("ERROR: input argument id should be a number between 00 and 99\n");
+        printf("Interface Command -> Error Invalid Argument: id -> '%s'. Must be a numeric value between 00 and 99.\n", dest_id_as_char);
         return ERR_INPUT;
     }
 
     if(is_IP_invalid(idIP)){
-        printf("ERROR: input argument idIP does not folow the standard IPv4 structure\n");
+        printf("Interface Command -> Error Invalid Argument: idIP -> '%s' does not folow the standard IPv4 structure\n", idIP);
         return ERR_INPUT;
     }
 
     if(is_Port_invalid(idTCP)){
-        printf("ERROR: input argument idTCP does not folow the standard Port structure\n");
+        printf("Interface Command -> Error Invalid Argument: idTCP -> '%s' does not folow the standard Port structure\n", idTCP);
         return ERR_INPUT;
     }
 
     int dest_id = atoi(dest_id_as_char), return_code;
 
     if(!My_node->is_in_net){
-        printf("Our node is not in the network, cant add edge\n");
+        printf("Interface Command -> Operation denied: Node must be in a network to perform this action. Run (j/dj) first or type 'help' for the full command list.\n");
         return SUCCESS;
     }
 
     if(My_node->TCP_fd[dest_id] != UNUSED_FD){
-        printf("Our node id(%02d) is already connected to id(%02d)\n", My_node->id, dest_id);
+        printf("Interface Command -> Operation denied: Node [%02d] is already a direct neighbor of [%02d]. Duplicate edges are not allowed.\n", My_node->id, dest_id);
         return SUCCESS;
     }
 

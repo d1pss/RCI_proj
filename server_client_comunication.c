@@ -150,7 +150,6 @@ int Send_chat_protocol_to_id(char* chat_protocol, int dest_id, Node_info* My_nod
     return Send_routing_protocol_to_id(chat_protocol, dest_id, My_node);
 }
 
-//return 7 indicates closed TCP con
 int Recive_message_from_fd(char* message, int sender_fd, Node_info* My_node){
     ssize_t n=read(sender_fd, message, TCP_buffer_len);
     if(n==-1){

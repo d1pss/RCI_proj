@@ -130,7 +130,7 @@ int main(int argc, char *argv[]){
                         return_code = Recive_message_from_fd(TCP_buffer, My_node->TCP_pending_fd[i], My_node);
 
                         //TCP connection was closed by the other side
-                        if(return_code == 7){
+                        if(return_code == STATUS_SPECIFIC){
                             close(My_node->TCP_pending_fd[i]);
                             remove_pending_fd(i, My_node);
                             continue;

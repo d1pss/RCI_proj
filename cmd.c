@@ -443,35 +443,28 @@ int cmd_remove_edge(char* id_to_remove_as_char, Node_info* My_node){
 
     Close_TCP_Client(id_to_remove, My_node);
 
-    //check if i have any neighbors left
-    if(My_node->number_of_TCP_channels == 0){
-        //I have no neighbors no need to enter state 1
-        if (My_node->adv_debug) {
-            char dist_to_prt[4];
-            My_node->dist[id_to_remove] == INF ? (void)strcpy(dist_to_prt, "INF") : (void)sprintf(dist_to_prt, "%02d", My_node->dist[id_to_remove]);
-            printf("DEBUG [%02d]: dist %s -> INF | succ %02d -> -1\n", id_to_remove, dist_to_prt, My_node->succ[id_to_remove]);
-        }
+    
+    for(i = 0; i < Number_of_ids; i++){
+        if(My_node->succ[i] == id_to_remove){
+            
+            if (My_node->adv_debug) {
+                char dist_to_prt[4];
+                My_node->dist[i] == INF ? (void)strcpy(dist_to_prt, "INF") : (void)sprintf(dist_to_prt, "%02d", My_node->dist[i]);
+                printf("DEBUG [%02d]: dist %s -> INF | succ %02d -> -1 | state 0 -> 1\n", i, dist_to_prt, My_node->succ[i]);
+            }
 
-        My_node->dist[id_to_remove] = INF;
-        My_node->succ[id_to_remove] = NO_SUCCESSOR;
-    }else{
-        //still have neighbors coord them
-        for(i = 0; i < Number_of_ids; i++){
-            if(My_node->succ[i] == id_to_remove){
-                
-                if (My_node->adv_debug) {
-                    char dist_to_prt[4];
-                    My_node->dist[i] == INF ? (void)strcpy(dist_to_prt, "INF") : (void)sprintf(dist_to_prt, "%02d", My_node->dist[i]);
-                    printf("DEBUG [%02d]: dist %s -> INF | succ %02d -> -1 | state 0 -> 1\n", i, dist_to_prt, My_node->succ[i]);
-                }
-
-                My_node->dist[i] = INF;
-                My_node->succ[i] = NO_SUCCESSOR;
+            My_node->dist[i] = INF;
+            My_node->succ[i] = NO_SUCCESSOR;
+            
+            //check if i have any neighbors left
+            if(My_node->number_of_TCP_channels != 0){
+                //still have neighbors coord them
                 My_node->state[i] = STATE_COORDINATION;
                 Coord_neighbors(i, My_node);
             }
         }
     }
+    
     
     printf("Edge removed: Connection with Node [%02d] closed.\n", id_to_remove);
     

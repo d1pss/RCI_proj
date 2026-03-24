@@ -75,7 +75,7 @@ int Create_and_Connect_TCP_client(char* dest_IP, char* dest_Port, int dest_id, N
         return ERR_SOCKET_IO;
     }  
 
-    memset(&hints,0,sizeof hints);
+    memset(&hints,0,sizeof(hints));
     hints.ai_family=AF_INET; //IPv4
     hints.ai_socktype=SOCK_STREAM; //TCP socket
 
@@ -89,7 +89,7 @@ int Create_and_Connect_TCP_client(char* dest_IP, char* dest_Port, int dest_id, N
 
     if(connect(My_node->TCP_fd[dest_id], res->ai_addr, res->ai_addrlen) == -1) {
         printf("TCP error (in Create_and_Connect_TCP_client) connect"); 
-        freeaddrinfo(res); // Libertar memória antes de sair
+        freeaddrinfo(res);
         close(My_node->TCP_fd[dest_id]);
         My_node->TCP_fd[dest_id] = UNUSED_FD;
         return ERR_SOCKET_IO;
@@ -110,7 +110,7 @@ int Create_and_Connect_TCP_client(char* dest_IP, char* dest_Port, int dest_id, N
     My_node->number_of_TCP_channels++;
 
     for(int i = 0; i < Number_of_ids; i++){
-        if((My_node->dist[i] < INF && My_node->state[i] == 0)){
+        if((My_node->dist[i] < INF && My_node->state[i] == STATE_EXPEDITION)){
             return_code = Send_ROUTE(dest_id, i, My_node);
             if(return_code != SUCCESS) return return_code;
         }
@@ -239,19 +239,19 @@ int select_timeout(int fd){
     FD_ZERO(&fdset);
     FD_SET(fd, &fdset);
 
-    //Define timeout
-    tv.tv_sec = 5; 
+    //Define timeout as UDP_TIMEOUT_SECONDS seconds
+    tv.tv_sec = UDP_TIMEOUT_SECONDS; 
     tv.tv_usec = 0;
 
     int sret = select(fd + 1, &fdset, NULL, NULL, &tv);
 
     if (sret == 0) {
         // TIMEOUT
-        printf("ERROR: The response took to long to arive or got lost\n");
+        printf("ERROR: The response took to long to arive or the server is not responding\n");
         close(fd);
-        return STATUS_SPECIFIC; 
+        return SUCCESS; 
     } else if (sret == -1) {
-        // ERRO in select
+        // ERROR in select
         printf("ERROR (UDP select)\n"); 
         close(fd);
         return ERR_UNEXPECTED;

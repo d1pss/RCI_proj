@@ -41,16 +41,15 @@ int add_id_to_net(char* net, char* id, Node_info* My_node){
 
     tid = get_unique_tid(My_node);
 
+    //format the message to send to the server
     sprintf(message, "REG %03d 0 %s %s %s %s\n", tid, net, id, My_node->Node_TCP_IP, My_node->Node_TCP_Port);
 
     return_code = send_message_to_UDP_server(message, response, My_node);
-
-    if(return_code != SUCCESS){
-        return return_code;
-    }
+    if(return_code != SUCCESS) return return_code;
 
     int items_found = sscanf(response, "%*s %d %s", &tid_read, op_str);
 
+    //check if the tid matches
     if(tid != tid_read){
         printf("Recived message with difrent tid lost data\n");
         return SUCCESS;
@@ -90,21 +89,21 @@ int get_id_info(char* id_IP ,char* id_Port ,bool* get_id_info ,char* net ,char* 
 
     tid = get_unique_tid(My_node);
 
+    //format the message to send to the server
     sprintf(message, "CONTACT %03d 0 %s %s\n", tid, net, id);
    
 
     return_code = send_message_to_UDP_server(message, response, My_node);
+    if(return_code != SUCCESS) return return_code;
 
-    if(return_code != SUCCESS){
-        return return_code;
-    }
-
+    //old code didn't use id_IP and id_Port (legacy support)
     if(id_IP == NULL || id_Port == NULL){
         items_found = sscanf(response, "%*s %d %s", &tid_read, op_str);
     }else{
         items_found = sscanf(response, "%*s %d %s %*s %*s %s %s", &tid_read, op_str, id_IP, id_Port);
     }
 
+    //check if the tid matches
     if(tid != tid_read){
         printf("Server Exchange Error -> Transaction Mismatch: Received TID does not match the sent TID. Data discarded to prevent corruption.\n");
         return SUCCESS;
@@ -211,8 +210,6 @@ bool is_string_a_number(char* string){
     // if *endptr is not \0, there was thrash in the sring
     if (string == endptr || *endptr != '\0') return false;
 
-
-
     return true;
 }
 
@@ -278,9 +275,11 @@ Node_info* init_Node(char** argv, int argc){
     My_node->debug = true;
     My_node->adv_debug = true;
 
+    //set the TCP and UDP info from argv
     strcpy(My_node->Node_TCP_IP, argv[1]);
     strcpy(My_node->Node_TCP_Port, argv[2]);
 
+    //if the user provided the UDP info in argv we set it if not we set it to default values
     if(argc == 5){
         strcpy(My_node->UDP_Server_IP, argv[3]);
         strcpy(My_node->UDP_Server_Port, argv[4]);
@@ -289,6 +288,7 @@ Node_info* init_Node(char** argv, int argc){
         strcpy(My_node->UDP_Server_Port, DEFAULT_UDP_PORT);
     }
 
+    //set the other variables to default values
     reset_My_node(My_node);
 
     return My_node;
@@ -297,12 +297,13 @@ Node_info* init_Node(char** argv, int argc){
 void reset_My_node(Node_info* My_node){
     for(int i = 0; i < Number_of_ids; i++){
         My_node->dist[i] = INF;
-        My_node->succ[i] = -1;
-        My_node->state[i] = 0;
-        My_node->succ_coord[i] = -1;
-        My_node->TCP_fd[i] = -1;
-        My_node->TCP_pending_fd[i] = -1;
+        My_node->succ[i] = NO_SUCCESSOR;
+        My_node->state[i] = STATE_EXPEDITION;
+        My_node->succ_coord[i] = NO_SUCCESSOR;
         My_node->pending_uncoord[i] = 0;
+
+        My_node->TCP_fd[i] = UNUSED_FD;
+        My_node->TCP_pending_fd[i] = UNUSED_FD;
     }
 
     My_node->number_pending_fd = 0;
@@ -369,6 +370,7 @@ int fragment_buffer(char* buffer, char*** frag_buffer, int* n_frags){
 
     int buffer_len = (int)strlen(buffer), curr_frag_strt_indx = 0, curr_frag_len = 0, curr_frag = 0;
 
+    //count the number of fragments in the buffer
     for(int i = 0; i < buffer_len; i++){
         if(buffer[i] == '\n'){
             (*n_frags)++;
@@ -378,6 +380,7 @@ int fragment_buffer(char* buffer, char*** frag_buffer, int* n_frags){
     (*frag_buffer) = (char**)malloc((*n_frags) * sizeof(char*));
     if((*frag_buffer) == NULL) return ERR_MEMORY;
 
+    //fill the frag_buffer with the fragments of the buffer
     for(int i = 0; i < buffer_len; i++){
         curr_frag_len++;
         if(buffer[i] == '\n'){
@@ -385,12 +388,15 @@ int fragment_buffer(char* buffer, char*** frag_buffer, int* n_frags){
             (*frag_buffer)[curr_frag] = (char*)malloc((curr_frag_len + 1) * sizeof(char));
             if((*frag_buffer)[curr_frag] == NULL) return ERR_MEMORY;
 
+            //copy the fragment to the frag_buffer
             for(int k = 0; k < curr_frag_len; k++){
                 (*frag_buffer)[curr_frag][k] = buffer[curr_frag_strt_indx + k];
             }
 
+            //add null terminator to the end of the fragment
             (*frag_buffer)[curr_frag][curr_frag_len] = '\0';
 
+            //update the variables for the next fragment
             curr_frag_len = 0;
             curr_frag_strt_indx = i + 1;
             curr_frag++;
